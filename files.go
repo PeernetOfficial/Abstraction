@@ -106,39 +106,28 @@ func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
     return &touchReturn, nil
 }
 
-// Rm abstracted function that removes a file
+// Rm Abstracted function that
+// removes file from the blockchain and warehouse
 func Rm(b *core.Backend, hashStr string) error {
-    // Remove file from warehouse
-    err := RmWarehouse(b, hashStr)
+    ID, err := uuid.FromBytes([]byte(hashStr))
     if err != nil {
         return err
+    }
+    var UUIDs []uuid.UUID
+    UUIDs = append(UUIDs, ID)
+
+    _, _, deletedFiles, status := b.UserBlockchain.DeleteFiles(UUIDs)
+
+    // If successfully deleted from the blockchain, delete from the Warehouse in case there are no other references.
+    if status == blockchain.StatusOK {
+        for n := range deletedFiles {
+            if files, status := b.UserBlockchain.FileExists(deletedFiles[n].Hash); status == blockchain.StatusOK && len(files) == 0 {
+                b.UserWarehouse.DeleteFile(deletedFiles[n].Hash)
+            }
+        }
     }
 
     return nil
 }
 
-// RmWarehouse abstracted function that removes a file
-// from the warehouse
-func RmWarehouse(b *core.Backend, hashStr string) error {
-    // Remove file from warehouse
-    hash, valid1 := webapi.DecodeBlake3Hash(hashStr)
-    if !valid1 {
-        //http.Error(w, "", http.StatusBadRequest)
-        return errors.New("hash not valid")
-    }
-
-    status, err := b.UserWarehouse.DeleteFile(hash)
-
-    if err != nil {
-        b.LogError("warehouse.DeleteFile", "status %d error: %v", status, err)
-        return err
-    }
-
-    return nil
-}
-
-// RmBlockchain abstracted function that removes a file
-// metadata from the blockchain
-//func RmBlockchain(b *core.Backend, hashStr string) error {
-//
-//}
+func
