@@ -3,13 +3,13 @@ File Name:  abstractions.go
 Copyright:  2021 Peernet s.r.o.
 Authors: Peter Kleissner, Akilan Selvacoumar
 */
+
 package Abstrations
 
 import (
     "encoding/hex"
     "errors"
     "github.com/PeernetOfficial/Abstraction/webapi"
-    "github.com/PeernetOfficial/core"
     "github.com/PeernetOfficial/core/blockchain"
     "github.com/PeernetOfficial/core/protocol"
     "github.com/PeernetOfficial/core/warehouse"
@@ -32,9 +32,9 @@ type TouchReturn struct {
 // and adds the file to the warehouse and
 // blockchain
 // returns blockchain version and height
-func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
+func Touch(api *webapi.WebapiInstance, filePath string) (*TouchReturn, error) {
     // Creates a File in the warehouse
-    hash, _, err := b.UserWarehouse.CreateFileFromPath(filePath)
+    hash, _, err := api.Backend.UserWarehouse.CreateFileFromPath(filePath)
     if err != nil {
         return nil, err
     }
@@ -54,7 +54,7 @@ func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
     inputFile.Hash = hash
 
     // Get the public key of the current node
-    _, publicKey := b.ExportPrivateKey()
+    _, publicKey := api.Backend.ExportPrivateKey()
     inputFile.NodeID = []byte(hex.EncodeToString(publicKey.SerializeCompressed()))
 
     inputFiles = append(inputFiles, inputFile)
@@ -75,7 +75,7 @@ func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
         if !File.IsVirtualFolder() {
             if _, err := warehouse.ValidateHash(File.Hash); err != nil {
                 return nil, errors.New("bad request when validating hash")
-            } else if _, fileInfo, status, _ := b.UserWarehouse.FileExists(File.Hash); status != warehouse.StatusOK {
+            } else if _, fileInfo, status, _ := api.Backend.UserWarehouse.FileExists(File.Hash); status != warehouse.StatusOK {
                 //EncodeJSON(api.backend, w, r, apiBlockchainBlockStatus{Status: blockchain.StatusNotInWarehouse})
                 return nil, errors.New("file not in warehouse")
             } else {
@@ -89,14 +89,14 @@ func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
         blockRecord := webapi.BlockRecordFileFromAPI(File)
 
         // Set the merkle tree info as appropriate.
-        if !webapi.SetFileMerkleInfo(b, &blockRecord) {
+        if !webapi.SetFileMerkleInfo(api.Backend, &blockRecord) {
             return nil, errors.New("merkle information not set")
         }
 
         filesAdd = append(filesAdd, blockRecord)
     }
 
-    newHeight, newVersion, _ := b.UserBlockchain.AddFiles(filesAdd)
+    newHeight, newVersion, _ := api.Backend.UserBlockchain.AddFiles(filesAdd)
 
     // Creating object for custom return type
     var touchReturn TouchReturn
@@ -108,7 +108,7 @@ func Touch(b *core.Backend, filePath string) (*TouchReturn, error) {
 
 // Rm Abstracted function that
 // removes file from the blockchain and warehouse
-func Rm(b *core.Backend, hashStr string) error {
+func Rm(api *webapi.WebapiInstance, hashStr string) error {
     ID, err := uuid.FromBytes([]byte(hashStr))
     if err != nil {
         return err
@@ -116,13 +116,13 @@ func Rm(b *core.Backend, hashStr string) error {
     var UUIDs []uuid.UUID
     UUIDs = append(UUIDs, ID)
 
-    _, _, deletedFiles, status := b.UserBlockchain.DeleteFiles(UUIDs)
+    _, _, deletedFiles, status := api.Backend.UserBlockchain.DeleteFiles(UUIDs)
 
     // If successfully deleted from the blockchain, delete from the Warehouse in case there are no other references.
     if status == blockchain.StatusOK {
         for n := range deletedFiles {
-            if files, status := b.UserBlockchain.FileExists(deletedFiles[n].Hash); status == blockchain.StatusOK && len(files) == 0 {
-                b.UserWarehouse.DeleteFile(deletedFiles[n].Hash)
+            if files, status := api.Backend.UserBlockchain.FileExists(deletedFiles[n].Hash); status == blockchain.StatusOK && len(files) == 0 {
+                api.Backend.UserWarehouse.DeleteFile(deletedFiles[n].Hash)
             }
         }
     }
@@ -130,4 +130,103 @@ func Rm(b *core.Backend, hashStr string) error {
     return nil
 }
 
-func
+// Search Abstracted function
+// to query for files available
+// in the p2p network (i.e the
+// Peernet protocol)
+// Since it's default it's ran for
+// 5 seconds as the default timeout
+// (This will be changed on later
+// iterations)
+func Search(api *webapi.WebapiInstance, term string) (*webapi.SearchResult, error) {
+    var input webapi.SearchRequest
+    input.Term = term
+    input.Timeout = 5
+    jobID, err := StartSearch(api, &input)
+    if err != nil {
+        return nil, err
+    }
+
+    // 6 seconds
+    time.Sleep(1000 * 6)
+
+    result, err := SearchResult(api, jobID)
+    if err != nil {
+        return nil, err
+    }
+
+    return result, nil
+}
+
+// StartSearch Abstracted function that
+// starts the search job based on specified
+// parameters and return the job ID
+// for a reference
+func StartSearch(api *webapi.WebapiInstance, input *webapi.SearchRequest) (uuid.UUID, error) {
+    if input.Timeout <= 0 {
+        input.Timeout = 20
+    }
+    if input.MaxResults <= 0 {
+        input.MaxResults = 200
+    }
+
+    // Terminate previous searches, if their IDs were supplied. This allows terminating the old search immediately without making a separate /search/terminate request.
+    for _, terminate := range input.TerminateID {
+        if job := api.JobLookup(terminate); job != nil {
+            job.Terminate()
+            api.RemoveJob(job)
+        }
+    }
+
+    job := api.DispatchSearch(*input)
+
+    return job.ID, nil
+}
+
+func SearchResult(api *webapi.WebapiInstance, jobID uuid.UUID) (*webapi.SearchResult, error) {
+    // find the job ID
+    job := api.JobLookup(jobID)
+    if job == nil {
+        return nil, errors.New("job id not found")
+    }
+
+    limit := 100
+
+    // query all results
+    var resultFiles []*webapi.ApiFile
+
+    resultFiles = job.ReturnNext(limit)
+
+    var result webapi.SearchResult
+    result.Files = []webapi.ApiFile{}
+
+    // loop over results
+    for n := range resultFiles {
+        result.Files = append(result.Files, *resultFiles[n])
+    }
+
+    // set the status
+    if len(result.Files) > 0 {
+        if job.IsSearchResults() {
+            result.Status = 0 // 0 = Success with results
+            return &result, nil
+        } else {
+            result.Status = 1 // No more results to expect
+            return nil, errors.New("no more results to expect (Search still running)")
+        }
+    } else {
+        switch job.Status {
+        case webapi.SearchStatusLive:
+            result.Status = 3 // No results yet available keep trying
+            return nil, errors.New("no results yet available keep trying")
+        case webapi.SearchStatusTerminated:
+            result.Status = 1 // No more results to expect
+            return nil, errors.New("no more results to expect (Search terminated)")
+        default: // SearchStatusNoIndex, SearchStatusNotStarted
+            result.Status = 1 // No more results to expect
+            return nil, errors.New("no more results to expect (Search not started)")
+        }
+    }
+
+    return nil, errors.New("search not successful")
+}

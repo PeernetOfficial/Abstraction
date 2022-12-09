@@ -30,7 +30,7 @@ type SearchFilter struct {
 // SearchJob is a collection of search jobs
 type SearchJob struct {
     // input settings
-    id        uuid.UUID     // The job id
+    ID        uuid.UUID     // The job ID
     timeout   time.Duration // timeout set for all searches
     maxResult int           // max results user-facing.
 
@@ -82,7 +82,7 @@ const (
 func (api *WebapiInstance) CreateSearchJob(Timeout time.Duration, MaxResults int, Filter SearchFilter) (job *SearchJob) {
     job = &SearchJob{}
     job.Status = SearchStatusNotStarted
-    job.id = uuid.New()
+    job.ID = uuid.New()
     job.timeout = Timeout
     job.maxResult = MaxResults
     job.filtersStart = Filter
@@ -94,7 +94,7 @@ func (api *WebapiInstance) CreateSearchJob(Timeout time.Duration, MaxResults int
 
     // add to the list of jobs
     api.allJobsMutex.Lock()
-    api.allJobs[job.id] = job
+    api.allJobs[job.ID] = job
     api.allJobsMutex.Unlock()
 
     return
@@ -319,7 +319,7 @@ func (job *SearchJob) isFileReceived(id uuid.UUID) (exists bool) {
 // RemoveJob removes the job structure from the list. Terminate should be called before. Unless the search is manually removed, it stays forever in the list.
 func (api *WebapiInstance) RemoveJob(job *SearchJob) {
     api.allJobsMutex.Lock()
-    delete(api.allJobs, job.id) // delete is safe to call multiple times, so auto-removal and manual one are fine and need no syncing
+    delete(api.allJobs, job.ID) // delete is safe to call multiple times, so auto-removal and manual one are fine and need no syncing
     api.allJobsMutex.Unlock()
 }
 

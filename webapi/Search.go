@@ -55,7 +55,7 @@ const (
 
 // SearchRequestResponse is the result to the initial search request
 type SearchRequestResponse struct {
-    ID     uuid.UUID `json:"id"`     // ID of the search job. This is used to get the results.
+    ID     uuid.UUID `json:"ID"`     // ID of the search job. This is used to get the results.
     Status int       `json:"status"` // Status of the search: 0 = Success (ID valid), 1 = Invalid Term, 2 = Error Max Concurrent Searches
 }
 
@@ -104,16 +104,16 @@ func (api *WebapiInstance) apiSearch(w http.ResponseWriter, r *http.Request) {
         }
     }
 
-    job := api.dispatchSearch(input)
+    job := api.DispatchSearch(input)
 
-    EncodeJSON(api.backend, w, r, SearchRequestResponse{Status: 0, ID: job.id})
+    EncodeJSON(api.Backend, w, r, SearchRequestResponse{Status: 0, ID: job.ID})
 }
 
 /*
 apiSearchResult returns results. The default limit is 100.
 If reset is set, all results will be filtered and sorted according to the settings. This means that the new first result will be returned again and internal result offset is set to 0.
 
-Request:    GET /search/result?id=[UUID]&limit=[max records]
+Request:    GET /search/result?ID=[UUID]&limit=[max records]
 Optional parameters:
 			&reset=[0|1] to reset the filters or sort orders with any of the below parameters (all required):
 			&filetype=[File Type]
@@ -127,7 +127,7 @@ Result:     200 with JSON structure SearchResult. Check the field status.
 */
 func (api *WebapiInstance) apiSearchResult(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    jobID, err := uuid.Parse(r.Form.Get("id"))
+    jobID, err := uuid.Parse(r.Form.Get("ID"))
     if err != nil {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -141,7 +141,7 @@ func (api *WebapiInstance) apiSearchResult(w http.ResponseWriter, r *http.Reques
     // find the job ID
     job := api.JobLookup(jobID)
     if job == nil {
-        EncodeJSON(api.backend, w, r, SearchResult{Status: 2})
+        EncodeJSON(api.Backend, w, r, SearchResult{Status: 2})
         return
     }
 
@@ -201,19 +201,19 @@ func (api *WebapiInstance) apiSearchResult(w http.ResponseWriter, r *http.Reques
         result.Statistic = job.Statistics()
     }
 
-    EncodeJSON(api.backend, w, r, result)
+    EncodeJSON(api.Backend, w, r, result)
 }
 
 /*
 apiSearchResultStream provides a websocket to receive results as stream.
 
-Request:    GET /search/result/ws?id=[UUID]&limit=[optional max records]
+Request:    GET /search/result/ws?ID=[UUID]&limit=[optional max records]
 Result:     If successful, upgrades to a websocket and sends JSON structure SearchResult messages.
             Limit is optional. Not used if ommitted or 0.
 */
 func (api *WebapiInstance) apiSearchResultStream(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    jobID, err := uuid.Parse(r.Form.Get("id"))
+    jobID, err := uuid.Parse(r.Form.Get("ID"))
     if err != nil {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -224,7 +224,7 @@ func (api *WebapiInstance) apiSearchResultStream(w http.ResponseWriter, r *http.
     // look up the job
     job := api.JobLookup(jobID)
     if job == nil {
-        EncodeJSON(api.backend, w, r, SearchResult{Status: 2})
+        EncodeJSON(api.Backend, w, r, SearchResult{Status: 2})
         return
     }
 
@@ -291,7 +291,7 @@ func (api *WebapiInstance) apiSearchResultStream(w http.ResponseWriter, r *http.
 /*
 apiSearchTerminate terminates a search
 
-Request:    GET /search/terminate?id=[UUID]
+Request:    GET /search/terminate?ID=[UUID]
 Response:   204 Empty
             400 Invalid input
             404 ID not found
@@ -299,7 +299,7 @@ Response:   204 Empty
 func (api *WebapiInstance) apiSearchTerminate(w http.ResponseWriter, r *http.Request) {
 
     r.ParseForm()
-    jobID, err := uuid.Parse(r.Form.Get("id"))
+    jobID, err := uuid.Parse(r.Form.Get("ID"))
     if err != nil {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -322,12 +322,12 @@ func (api *WebapiInstance) apiSearchTerminate(w http.ResponseWriter, r *http.Req
 /*
 apiSearchStatistic returns search result statistics. Statistics are always calculated over all results, regardless of any applied runtime filters.
 
-Request:    GET /search/result?id=[UUID]
+Request:    GET /search/result?ID=[UUID]
 Result:     200 with JSON structure SearchStatistic. Check the field status (0 = Success, 2 = ID not found).
 */
 func (api *WebapiInstance) apiSearchStatistic(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    jobID, err := uuid.Parse(r.Form.Get("id"))
+    jobID, err := uuid.Parse(r.Form.Get("ID"))
     if err != nil {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -336,13 +336,13 @@ func (api *WebapiInstance) apiSearchStatistic(w http.ResponseWriter, r *http.Req
     // find the job ID
     job := api.JobLookup(jobID)
     if job == nil {
-        EncodeJSON(api.backend, w, r, SearchStatistic{Status: 2})
+        EncodeJSON(api.Backend, w, r, SearchStatistic{Status: 2})
         return
     }
 
     stats := job.Statistics()
 
-    EncodeJSON(api.backend, w, r, SearchStatistic{SearchStatisticData: stats, Status: 0, IsTerminated: job.IsTerminated()})
+    EncodeJSON(api.Backend, w, r, SearchStatistic{SearchStatisticData: stats, Status: 0, IsTerminated: job.IsTerminated()})
 }
 
 /*
@@ -364,7 +364,7 @@ func (api *WebapiInstance) apiExplore(w http.ResponseWriter, r *http.Request) {
         fileType = -1
     }
 
-    resultFiles := api.queryRecentShared(api.backend, fileType, uint64(limit*20/100), uint64(offset), uint64(limit))
+    resultFiles := api.queryRecentShared(api.Backend, fileType, uint64(limit*20/100), uint64(offset), uint64(limit))
 
     var result SearchResult
     result.Files = []ApiFile{}
@@ -380,7 +380,7 @@ func (api *WebapiInstance) apiExplore(w http.ResponseWriter, r *http.Request) {
 
     result.Status = 1 // No more results to expect
 
-    EncodeJSON(api.backend, w, r, result)
+    EncodeJSON(api.Backend, w, r, result)
 }
 
 func (input *SearchRequest) Parse() (Timeout time.Duration) {

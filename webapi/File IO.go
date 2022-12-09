@@ -7,16 +7,16 @@ Author:     Peter Kleissner
 package webapi
 
 import (
-	"errors"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
+    "errors"
+    "io"
+    "net/http"
+    "strconv"
+    "time"
 
-	"github.com/PeernetOfficial/core"
-	"github.com/PeernetOfficial/core/btcec"
-	"github.com/PeernetOfficial/core/protocol"
-	"github.com/PeernetOfficial/core/warehouse"
+    "github.com/PeernetOfficial/core"
+    "github.com/PeernetOfficial/core/btcec"
+    "github.com/PeernetOfficial/core/protocol"
+    "github.com/PeernetOfficial/core/warehouse"
 )
 
 /*
@@ -35,100 +35,100 @@ Response:   200 with the content
             502 if unable to find or connect to the remote peer in time
 */
 func (api *WebapiInstance) apiFileRead(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	var err error
+    r.ParseForm()
+    var err error
 
-	// validate hashes (must be blake3) and other input
-	fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
-	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
-	publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
-	if !valid1 || (!valid2 && err3 != nil) {
-		http.Error(w, "", http.StatusBadRequest)
-		return
-	}
+    // validate hashes (must be blake3) and other input
+    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
+    publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
+    if !valid1 || (!valid2 && err3 != nil) {
+        http.Error(w, "", http.StatusBadRequest)
+        return
+    }
 
-	timeoutSeconds, _ := strconv.Atoi(r.Form.Get("timeout"))
-	if timeoutSeconds == 0 {
-		timeoutSeconds = 10
-	}
-	timeout := time.Duration(timeoutSeconds) * time.Second
+    timeoutSeconds, _ := strconv.Atoi(r.Form.Get("timeout"))
+    if timeoutSeconds == 0 {
+        timeoutSeconds = 10
+    }
+    timeout := time.Duration(timeoutSeconds) * time.Second
 
-	offset, _ := strconv.Atoi(r.Form.Get("offset"))
-	limit, _ := strconv.Atoi(r.Form.Get("limit"))
+    offset, _ := strconv.Atoi(r.Form.Get("offset"))
+    limit, _ := strconv.Atoi(r.Form.Get("limit"))
 
-	// Range header?
-	var ranges []HTTPRange
-	if ranges, err = ParseRangeHeader(r.Header.Get("Range"), -1, true); err != nil || len(ranges) > 1 {
-		http.Error(w, "", http.StatusBadRequest)
-		return
-	} else if len(ranges) == 1 {
-		if ranges[0].length != -1 { // if length is not specified, limit remains 0 which is maximum
-			limit = ranges[0].length
-		}
-		offset = ranges[0].start
-	}
+    // Range header?
+    var ranges []HTTPRange
+    if ranges, err = ParseRangeHeader(r.Header.Get("Range"), -1, true); err != nil || len(ranges) > 1 {
+        http.Error(w, "", http.StatusBadRequest)
+        return
+    } else if len(ranges) == 1 {
+        if ranges[0].length != -1 { // if length is not specified, limit remains 0 which is maximum
+            limit = ranges[0].length
+        }
+        offset = ranges[0].start
+    }
 
-	// Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
-	if serveFileFromWarehouse(api.backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
-		return
-	}
+    // Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
+    if serveFileFromWarehouse(api.Backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
+        return
+    }
 
-	// try connecting via node ID or peer ID?
-	var peer *core.PeerInfo
+    // try connecting via node ID or peer ID?
+    var peer *core.PeerInfo
 
-	if valid2 {
-		peer, err = PeerConnectNode(api.backend, nodeID, timeout)
-	} else if err3 == nil {
-		peer, err = PeerConnectPublicKey(api.backend, publicKey, timeout)
-	}
-	if err != nil {
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
+    if valid2 {
+        peer, err = PeerConnectNode(api.Backend, nodeID, timeout)
+    } else if err3 == nil {
+        peer, err = PeerConnectPublicKey(api.Backend, publicKey, timeout)
+    }
+    if err != nil {
+        w.WriteHeader(http.StatusBadGateway)
+        return
+    }
 
-	// Start the reader. If this HTTP request is canceled, r.Context().Done() acts as cancellation signal to the underlying UDT connection.
-	reader, fileSize, transferSize, err := FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
-	if reader != nil {
-		defer reader.Close()
-	}
-	if err != nil || reader == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+    // Start the reader. If this HTTP request is canceled, r.Context().Done() acts as cancellation signal to the underlying UDT connection.
+    reader, fileSize, transferSize, err := FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
+    if reader != nil {
+        defer reader.Close()
+    }
+    if err != nil || reader == nil {
+        w.WriteHeader(http.StatusNotFound)
+        return
+    }
 
-	// set the right headers
-	setContentLengthRangeHeader(w, uint64(offset), transferSize, fileSize, ranges)
+    // set the right headers
+    setContentLengthRangeHeader(w, uint64(offset), transferSize, fileSize, ranges)
 
-	// Start sending the data!
-	io.Copy(w, io.LimitReader(reader, int64(transferSize)))
+    // Start sending the data!
+    io.Copy(w, io.LimitReader(reader, int64(transferSize)))
 }
 
 // serveFileFromWarehouse serves the file from the warehouse. If it is not available, it returns false and does not use the writer.
 // Limit is optional, 0 means the entire file.
 func serveFileFromWarehouse(backend *core.Backend, w http.ResponseWriter, fileHash []byte, offset, limit uint64, ranges []HTTPRange) (valid bool) {
-	// Check if the file is available in the local warehouse.
-	_, fileSize, status, _ := backend.UserWarehouse.FileExists(fileHash)
-	if status != warehouse.StatusOK {
-		return false
-	}
+    // Check if the file is available in the local warehouse.
+    _, fileSize, status, _ := backend.UserWarehouse.FileExists(fileHash)
+    if status != warehouse.StatusOK {
+        return false
+    }
 
-	// validate offset and limit
-	if limit > 0 && offset+limit > fileSize {
-		http.Error(w, "invalid limit", http.StatusBadRequest)
-		return true
-	} else if offset > fileSize {
-		http.Error(w, "invalid offset", http.StatusBadRequest)
-		return true
-	} else if limit == 0 {
-		limit = fileSize - offset
-	}
+    // validate offset and limit
+    if limit > 0 && offset+limit > fileSize {
+        http.Error(w, "invalid limit", http.StatusBadRequest)
+        return true
+    } else if offset > fileSize {
+        http.Error(w, "invalid offset", http.StatusBadRequest)
+        return true
+    } else if limit == 0 {
+        limit = fileSize - offset
+    }
 
-	setContentLengthRangeHeader(w, offset, limit, fileSize, ranges)
+    setContentLengthRangeHeader(w, offset, limit, fileSize, ranges)
 
-	status, _, _ = backend.UserWarehouse.ReadFile(fileHash, int64(offset), int64(limit), w)
+    status, _, _ = backend.UserWarehouse.ReadFile(fileHash, int64(offset), int64(limit), w)
 
-	// StatusErrorReadFile must be considered success, since parts of the file may have been transferred already and recovery is not possible.
-	return status == warehouse.StatusErrorReadFile || status == warehouse.StatusOK
+    // StatusErrorReadFile must be considered success, since parts of the file may have been transferred already and recovery is not possible.
+    return status == warehouse.StatusErrorReadFile || status == warehouse.StatusOK
 }
 
 /*
@@ -148,120 +148,120 @@ Response:   200 with the content
             502 if unable to find or connect to the remote peer in time
 */
 func (api *WebapiInstance) apiFileView(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	var err error
+    r.ParseForm()
+    var err error
 
-	// validate hashes (must be blake3) and other input
-	fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
-	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
-	publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
-	if !valid1 || (!valid2 && err3 != nil) {
-		http.Error(w, "", http.StatusBadRequest)
-		return
-	}
+    // validate hashes (must be blake3) and other input
+    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
+    publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
+    if !valid1 || (!valid2 && err3 != nil) {
+        http.Error(w, "", http.StatusBadRequest)
+        return
+    }
 
-	timeoutSeconds, _ := strconv.Atoi(r.Form.Get("timeout"))
-	if timeoutSeconds == 0 {
-		timeoutSeconds = 10
-	}
-	timeout := time.Duration(timeoutSeconds) * time.Second
+    timeoutSeconds, _ := strconv.Atoi(r.Form.Get("timeout"))
+    if timeoutSeconds == 0 {
+        timeoutSeconds = 10
+    }
+    timeout := time.Duration(timeoutSeconds) * time.Second
 
-	offset, _ := strconv.Atoi(r.Form.Get("offset"))
-	limit, _ := strconv.Atoi(r.Form.Get("limit"))
-	format, _ := strconv.Atoi(r.Form.Get("format"))
-	localCacheDisable, _ := strconv.ParseBool(r.Form.Get("nocache"))
+    offset, _ := strconv.Atoi(r.Form.Get("offset"))
+    limit, _ := strconv.Atoi(r.Form.Get("limit"))
+    format, _ := strconv.Atoi(r.Form.Get("format"))
+    localCacheDisable, _ := strconv.ParseBool(r.Form.Get("nocache"))
 
-	// Range header?
-	var ranges []HTTPRange
-	if ranges, err = ParseRangeHeader(r.Header.Get("Range"), -1, true); err != nil || len(ranges) > 1 {
-		http.Error(w, "", http.StatusBadRequest)
-		return
-	} else if len(ranges) == 1 {
-		if ranges[0].length != -1 { // if length is not specified, limit remains 0 which is maximum
-			limit = ranges[0].length
-		}
-		offset = ranges[0].start
-	}
+    // Range header?
+    var ranges []HTTPRange
+    if ranges, err = ParseRangeHeader(r.Header.Get("Range"), -1, true); err != nil || len(ranges) > 1 {
+        http.Error(w, "", http.StatusBadRequest)
+        return
+    } else if len(ranges) == 1 {
+        if ranges[0].length != -1 { // if length is not specified, limit remains 0 which is maximum
+            limit = ranges[0].length
+        }
+        offset = ranges[0].start
+    }
 
-	w.Header().Set("Accept-Ranges", "bytes") // always indicate accepting of Range header
+    w.Header().Set("Accept-Ranges", "bytes") // always indicate accepting of Range header
 
-	switch format {
-	case 14:
-		// Video: Indicate MP4 always. There are tons of other MIME types that could be used.
-		w.Header().Set("Content-Type", "video/mp4")
-	}
+    switch format {
+    case 14:
+        // Video: Indicate MP4 always. There are tons of other MIME types that could be used.
+        w.Header().Set("Content-Type", "video/mp4")
+    }
 
-	// Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
-	if !localCacheDisable {
-		if serveFileFromWarehouse(api.backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
-			return
-		}
-	}
+    // Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
+    if !localCacheDisable {
+        if serveFileFromWarehouse(api.Backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
+            return
+        }
+    }
 
-	// try connecting via node ID or peer ID?
-	var peer *core.PeerInfo
+    // try connecting via node ID or peer ID?
+    var peer *core.PeerInfo
 
-	if valid2 {
-		peer, err = PeerConnectNode(api.backend, nodeID, timeout)
-	} else if err3 == nil {
-		peer, err = PeerConnectPublicKey(api.backend, publicKey, timeout)
-	}
-	if err != nil {
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
+    if valid2 {
+        peer, err = PeerConnectNode(api.Backend, nodeID, timeout)
+    } else if err3 == nil {
+        peer, err = PeerConnectPublicKey(api.Backend, publicKey, timeout)
+    }
+    if err != nil {
+        w.WriteHeader(http.StatusBadGateway)
+        return
+    }
 
-	// start the reader
-	reader, fileSize, transferSize, err := FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
-	if reader != nil {
-		defer reader.Close()
-	}
-	if err != nil || reader == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+    // start the reader
+    reader, fileSize, transferSize, err := FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
+    if reader != nil {
+        defer reader.Close()
+    }
+    if err != nil || reader == nil {
+        w.WriteHeader(http.StatusNotFound)
+        return
+    }
 
-	// set the right headers
-	setContentLengthRangeHeader(w, uint64(offset), transferSize, fileSize, ranges)
+    // set the right headers
+    setContentLengthRangeHeader(w, uint64(offset), transferSize, fileSize, ranges)
 
-	// Start sending the data!
-	io.Copy(w, io.LimitReader(reader, int64(transferSize)))
+    // Start sending the data!
+    io.Copy(w, io.LimitReader(reader, int64(transferSize)))
 }
 
 // PeerConnectPublicKey attempts to connect to the peer specified by its public key (= peer ID).
 func PeerConnectPublicKey(backend *core.Backend, publicKey *btcec.PublicKey, timeout time.Duration) (peer *core.PeerInfo, err error) {
-	if publicKey == nil {
-		return nil, errors.New("invalid public key")
-	}
+    if publicKey == nil {
+        return nil, errors.New("invalid public key")
+    }
 
-	// First look up in the peer list.
-	if peer = backend.PeerlistLookup(publicKey); peer != nil {
-		return peer, nil
-	}
+    // First look up in the peer list.
+    if peer = backend.PeerlistLookup(publicKey); peer != nil {
+        return peer, nil
+    }
 
-	// Try to connect via DHT.
-	nodeID := protocol.PublicKey2NodeID(publicKey)
-	if _, peer, _ = backend.FindNode(nodeID, timeout); peer != nil {
-		return peer, nil
-	}
+    // Try to connect via DHT.
+    nodeID := protocol.PublicKey2NodeID(publicKey)
+    if _, peer, _ = backend.FindNode(nodeID, timeout); peer != nil {
+        return peer, nil
+    }
 
-	// otherwise not found :(
-	return nil, errors.New("peer not found")
+    // otherwise not found :(
+    return nil, errors.New("peer not found")
 }
 
 // PeerConnectNode tries to connect via the node ID
 func PeerConnectNode(backend *core.Backend, nodeID []byte, timeout time.Duration) (peer *core.PeerInfo, err error) {
-	if len(nodeID) != 256/8 {
-		return nil, errors.New("invalid node ID")
-	}
+    if len(nodeID) != 256/8 {
+        return nil, errors.New("invalid node ID")
+    }
 
-	// Try to connect via DHT.
-	if _, peer, _ = backend.FindNode(nodeID, timeout); peer != nil {
-		return peer, nil
-	}
+    // Try to connect via DHT.
+    if _, peer, _ = backend.FindNode(nodeID, timeout); peer != nil {
+        return peer, nil
+    }
 
-	// otherwise not found :(
-	return nil, errors.New("peer not found")
+    // otherwise not found :(
+    return nil, errors.New("peer not found")
 }
 
 // FileStartReader providers a reader to a remote file. The reader must be closed by the caller.
@@ -269,33 +269,33 @@ func PeerConnectNode(backend *core.Backend, nodeID []byte, timeout time.Duration
 // Transfer Size is the size in bytes that is actually going to be transferred. The reader should be closed after reading that amount.
 // The optional cancelChan can be used to stop the file transfer at any point.
 func FileStartReader(peer *core.PeerInfo, hash []byte, offset, limit uint64, cancelChan <-chan struct{}) (reader io.ReadCloser, fileSize, transferSize uint64, err error) {
-	if peer == nil {
-		return nil, 0, 0, errors.New("peer not provided")
-	} else if !peer.IsConnectionActive() {
-		return nil, 0, 0, errors.New("no valid connection to peer")
-	}
+    if peer == nil {
+        return nil, 0, 0, errors.New("peer not provided")
+    } else if !peer.IsConnectionActive() {
+        return nil, 0, 0, errors.New("no valid connection to peer")
+    }
 
-	udtConn, virtualConn, err := peer.FileTransferRequestUDT(hash, offset, limit)
-	if err != nil {
-		return nil, 0, 0, err
-	}
+    udtConn, virtualConn, err := peer.FileTransferRequestUDT(hash, offset, limit)
+    if err != nil {
+        return nil, 0, 0, err
+    }
 
-	if cancelChan != nil {
-		go func() {
-			<-cancelChan
-			udtConn.Close()
-		}()
-	}
+    if cancelChan != nil {
+        go func() {
+            <-cancelChan
+            udtConn.Close()
+        }()
+    }
 
-	fileSize, transferSize, err = protocol.FileTransferReadHeader(udtConn)
-	if err != nil {
-		udtConn.Close()
-		return nil, 0, 0, err
-	}
+    fileSize, transferSize, err = protocol.FileTransferReadHeader(udtConn)
+    if err != nil {
+        udtConn.Close()
+        return nil, 0, 0, err
+    }
 
-	virtualConn.Stats.(*core.FileTransferStats).FileSize = fileSize
+    virtualConn.Stats.(*core.FileTransferStats).FileSize = fileSize
 
-	return udtConn, fileSize, transferSize, nil
+    return udtConn, fileSize, transferSize, nil
 }
 
 // FileReadAll downloads the file from the peer.
@@ -303,17 +303,17 @@ func FileStartReader(peer *core.PeerInfo, hash []byte, offset, limit uint64, can
 // It allocates whatever size is reported by the remote peer. This could lead to an out of memory crash.
 // This function is blocking and may take a long time depending on the remote peer and the network connection.
 func FileReadAll(peer *core.PeerInfo, hash []byte) (data []byte, err error) {
-	reader, _, transferSize, err := FileStartReader(peer, hash, 0, 0, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
+    reader, _, transferSize, err := FileStartReader(peer, hash, 0, 0, nil)
+    if err != nil {
+        return nil, err
+    }
+    defer reader.Close()
 
-	// read all data
-	data = make([]byte, transferSize) // Warning: This could lead to an out of memory crash.
-	_, err = reader.Read(data)
+    // read all data
+    data = make([]byte, transferSize) // Warning: This could lead to an out of memory crash.
+    _, err = reader.Read(data)
 
-	// Note: This function does not verify if the returned data matches the hash and expected size.
+    // Note: This function does not verify if the returned data matches the hash and expected size.
 
-	return data, err
+    return data, err
 }

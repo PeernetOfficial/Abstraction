@@ -21,7 +21,7 @@ import (
 
 type apiResponseDownloadStatus struct {
     APIStatus      int       `json:"apistatus"`      // Status of the API call. See DownloadResponseX.
-    ID             uuid.UUID `json:"id"`             // Download ID. This can be used to query the latest status and take actions.
+    ID             uuid.UUID `json:"ID"`             // Download ID. This can be used to query the latest status and take actions.
     DownloadStatus int       `json:"downloadstatus"` // Status of the download. See DownloadX.
     File           ApiFile   `json:"file"`           // File information. Only available for status >= DownloadWaitSwarm.
     Progress       struct {
@@ -76,11 +76,11 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
         return
     }
 
-    info := &downloadInfo{backend: api.backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID}
+    info := &downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID}
 
     // create the file immediately
     if info.initDiskFile(filePath) != nil {
-        EncodeJSON(api.backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
+        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
         return
     }
 
@@ -90,18 +90,18 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
     // start the download!
     go info.Start()
 
-    EncodeJSON(api.backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
+    EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 }
 
 /*
 apiDownloadStatus returns the status of an active download.
 
-Request:    GET /download/status?id=[download ID]
+Request:    GET /download/status?ID=[download ID]
 Result:     200 with JSON structure apiResponseDownloadStatus
 */
 func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    id, err := uuid.Parse(r.Form.Get("id"))
+    id, err := uuid.Parse(r.Form.Get("ID"))
     if err != nil {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -109,7 +109,7 @@ func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Requ
 
     info := api.downloadLookup(id)
     if info == nil {
-        EncodeJSON(api.backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
+        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
         return
     }
 
@@ -132,7 +132,7 @@ func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Requ
 
     info.RUnlock()
 
-    EncodeJSON(api.backend, w, r, response)
+    EncodeJSON(api.Backend, w, r, response)
 }
 
 /*
@@ -140,12 +140,12 @@ apiDownloadAction pauses, resumes, and cancels a download. Once canceled, a new 
 Only active downloads can be paused. While a download is in discovery phase (querying metadata, joining swarm), it can only be canceled.
 Action: 0 = Pause, 1 = Resume, 2 = Cancel.
 
-Request:    GET /download/action?id=[download ID]&action=[action]
+Request:    GET /download/action?ID=[download ID]&action=[action]
 Result:     200 with JSON structure apiResponseDownloadStatus (using APIStatus and DownloadStatus)
 */
 func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    id, err := uuid.Parse(r.Form.Get("id"))
+    id, err := uuid.Parse(r.Form.Get("ID"))
     action, err2 := strconv.Atoi(r.Form.Get("action"))
     if err != nil || err2 != nil || action < 0 || action > 2 {
         http.Error(w, "", http.StatusBadRequest)
@@ -154,7 +154,7 @@ func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Requ
 
     info := api.downloadLookup(id)
     if info == nil {
-        EncodeJSON(api.backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
+        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
         return
     }
 
@@ -171,7 +171,7 @@ func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Requ
         apiStatus = info.Cancel()
     }
 
-    EncodeJSON(api.backend, w, r, apiResponseDownloadStatus{APIStatus: apiStatus, ID: info.id, DownloadStatus: info.status})
+    EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: apiStatus, ID: info.id, DownloadStatus: info.status})
 }
 
 // ---- download tracking ----
