@@ -13,31 +13,31 @@ import (
     "github.com/PeernetOfficial/core/warehouse"
 )
 
-// WarehouseResult is the response to creating a new file in the warehouse
+// WarehouseResult is the response to creating a new File in the warehouse
 type WarehouseResult struct {
-    Status int    `json:"status"` // See warehouse.StatusX.
-    Hash   []byte `json:"hash"`   // Hash of the file.
+    Status int    `json:"Status"` // See warehouse.StatusX.
+    Hash   []byte `json:"Hash"`   // Hash of the File.
 }
 
 /*
-apiWarehouseCreateFile creates a file in the warehouse.
+apiWarehouseCreateFile creates a File in the warehouse.
 
-Request:    POST /warehouse/create with raw data to create as new file
+Request:    POST /warehouse/create with raw data to create as new File
 Response:   200 with JSON structure WarehouseResult
 */
 func (api *WebapiInstance) apiWarehouseCreateFile(w http.ResponseWriter, r *http.Request) {
     hash, status, err := api.Backend.UserWarehouse.CreateFile(r.Body, 0)
 
     if err != nil {
-        api.Backend.LogError("warehouse.CreateFile", "status %d error: %v", status, err)
+        api.Backend.LogError("warehouse.CreateFile", "Status %d error: %v", status, err)
     }
 
     EncodeJSON(api.Backend, w, r, WarehouseResult{Status: status, Hash: hash})
 }
 
 /*
-apiWarehouseCreateFilePath creates a file in the warehouse by copying it from an existing file.
-Warning: An attacker could supply any local file using this function, put them into storage and read them! No input path verification or limitation is done.
+apiWarehouseCreateFilePath creates a File in the warehouse by copying it from an existing File.
+Warning: An attacker could supply any local File using this function, put them into storage and read them! No input path verification or limitation is done.
 In the future the API should be secured using a random API key and setting the CORS header prohibiting regular browsers to access the API.
 
 Request:    GET /warehouse/create/path?path=[target path on disk]
@@ -54,24 +54,24 @@ func (api *WebapiInstance) apiWarehouseCreateFilePath(w http.ResponseWriter, r *
     hash, status, err := api.Backend.UserWarehouse.CreateFileFromPath(filePath)
 
     if err != nil {
-        api.Backend.LogError("warehouse.CreateFile", "status %d error: %v", status, err)
+        api.Backend.LogError("warehouse.CreateFile", "Status %d error: %v", status, err)
     }
 
     EncodeJSON(api.Backend, w, r, WarehouseResult{Status: status, Hash: hash})
 }
 
 /*
-apiWarehouseReadFile reads a file in the warehouse.
+apiWarehouseReadFile reads a File in the warehouse.
 
-Request:    GET /warehouse/read?hash=[hash]
-            Optional parameters &offset=[file offset]&limit=[read limit in bytes]
-Response:   200 with the raw file data
-			404 if file was not found
-			500 in case of internal error opening the file
+Request:    GET /warehouse/read?Hash=[Hash]
+            Optional parameters &offset=[File offset]&limit=[read limit in bytes]
+Response:   200 with the raw File data
+			404 if File was not found
+			500 in case of internal error opening the File
 */
 func (api *WebapiInstance) apiWarehouseReadFile(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    hash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     if !valid1 {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -90,23 +90,23 @@ func (api *WebapiInstance) apiWarehouseReadFile(w http.ResponseWriter, r *http.R
         w.WriteHeader(http.StatusInternalServerError)
         return
         // Cannot catch warehouse.StatusErrorReadFile since data may have been already returned.
-        // In the future a special header indicating the expected file length could be sent (would require a callback in ReadFile), although the caller should already know the file size based on metadata.
+        // In the future a special header indicating the expected File length could be sent (would require a callback in ReadFile), although the caller should already know the File size based on metadata.
     }
 
     if err != nil {
-        api.Backend.LogError("warehouse.ReadFile", "status %d read %d error: %v", status, bytesRead, err)
+        api.Backend.LogError("warehouse.ReadFile", "Status %d read %d error: %v", status, bytesRead, err)
     }
 }
 
 /*
-apiWarehouseDeleteFile deletes a file in the warehouse.
+apiWarehouseDeleteFile deletes a File in the warehouse.
 
-Request:    GET /warehouse/delete?hash=[hash]
+Request:    GET /warehouse/delete?Hash=[Hash]
 Response:   200 with JSON structure WarehouseResult
 */
 func (api *WebapiInstance) apiWarehouseDeleteFile(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    hash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     if !valid1 {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -115,23 +115,23 @@ func (api *WebapiInstance) apiWarehouseDeleteFile(w http.ResponseWriter, r *http
     status, err := api.Backend.UserWarehouse.DeleteFile(hash)
 
     if err != nil {
-        api.Backend.LogError("warehouse.DeleteFile", "status %d error: %v", status, err)
+        api.Backend.LogError("warehouse.DeleteFile", "Status %d error: %v", status, err)
     }
 
     EncodeJSON(api.Backend, w, r, WarehouseResult{Status: status, Hash: hash})
 }
 
 /*
-apiWarehouseReadFilePath reads a file from the warehouse and stores it to the target file. It fails with StatusErrorTargetExists if the target file already exists.
-The path must include the full directory and file name.
+apiWarehouseReadFilePath reads a File from the warehouse and stores it to the target File. It fails with StatusErrorTargetExists if the target File already exists.
+The path must include the full directory and File name.
 
-Request:    GET /warehouse/read/path?hash=[hash]&path=[target path on disk]
-            Optional parameters &offset=[file offset]&limit=[read limit in bytes]
+Request:    GET /warehouse/read/path?Hash=[Hash]&path=[target path on disk]
+            Optional parameters &offset=[File offset]&limit=[read limit in bytes]
 Response:   200 with JSON structure WarehouseResult
 */
 func (api *WebapiInstance) apiWarehouseReadFilePath(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
-    hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    hash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     if !valid1 {
         http.Error(w, "", http.StatusBadRequest)
         return
@@ -144,7 +144,7 @@ func (api *WebapiInstance) apiWarehouseReadFilePath(w http.ResponseWriter, r *ht
     status, bytesRead, err := api.Backend.UserWarehouse.ReadFileToDisk(hash, int64(offset), int64(limit), targetFile)
 
     if err != nil {
-        api.Backend.LogError("warehouse.ReadFileToDisk", "status %d read %d error: %v", status, bytesRead, err)
+        api.Backend.LogError("warehouse.ReadFileToDisk", "Status %d read %d error: %v", status, bytesRead, err)
     }
 
     EncodeJSON(api.Backend, w, r, WarehouseResult{Status: status, Hash: hash})

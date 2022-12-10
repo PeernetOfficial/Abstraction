@@ -34,7 +34,7 @@ type WebapiInstance struct {
     allJobsMutex sync.RWMutex
 
     // download info
-    downloads      map[uuid.UUID]*downloadInfo
+    downloads      map[uuid.UUID]*DownloadInfo
     downloadsMutex sync.RWMutex
 }
 
@@ -49,7 +49,7 @@ var WSUpgrader = websocket.Upgrader{
 }
 
 // Start starts the API. ListenAddresses is a list of IP:Ports.
-// The certificate file and key are only used if SSL is enabled. The read and write timeout may be 0 for no timeout.
+// The certificate File and key are only used if SSL is enabled. The read and write timeout may be 0 for no timeout.
 // The API key may be uuid.Nil to disable it although this is not recommended for security reasons.
 func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, CertificateFile, CertificateKey string, TimeoutRead, TimeoutWrite time.Duration, APIKey uuid.UUID) (api *WebapiInstance) {
     if len(ListenAddresses) == 0 {
@@ -59,9 +59,9 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
     api = &WebapiInstance{
         Backend:         Backend,
         Router:          mux.NewRouter(),
-        AllowKeyInParam: []string{"/file/read", "/file/view"},
+        AllowKeyInParam: []string{"/File/read", "/File/view"},
         allJobs:         make(map[uuid.UUID]*SearchJob),
-        downloads:       make(map[uuid.UUID]*downloadInfo),
+        downloads:       make(map[uuid.UUID]*DownloadInfo),
     }
 
     if APIKey != uuid.Nil {
@@ -69,17 +69,17 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
     }
 
     api.Router.HandleFunc("/test", apiTest).Methods("GET")
-    api.Router.HandleFunc("/status", api.apiStatus).Methods("GET")
-    api.Router.HandleFunc("/status/peers", api.apiStatusPeers).Methods("GET")
+    api.Router.HandleFunc("/Status", api.apiStatus).Methods("GET")
+    api.Router.HandleFunc("/Status/peers", api.apiStatusPeers).Methods("GET")
     api.Router.HandleFunc("/account/info", api.apiAccountInfo).Methods("GET")
     api.Router.HandleFunc("/account/delete", api.apiAccountDelete).Methods("GET")
     api.Router.HandleFunc("/blockchain/header", api.apiBlockchainHeaderFunc).Methods("GET")
     api.Router.HandleFunc("/blockchain/append", api.apiBlockchainAppend).Methods("POST")
     api.Router.HandleFunc("/blockchain/read", api.apiBlockchainRead).Methods("GET")
-    api.Router.HandleFunc("/blockchain/file/add", api.apiBlockchainFileAdd).Methods("POST")
-    api.Router.HandleFunc("/blockchain/file/list", api.apiBlockchainFileList).Methods("GET")
-    api.Router.HandleFunc("/blockchain/file/delete", api.apiBlockchainFileDelete).Methods("POST")
-    api.Router.HandleFunc("/blockchain/file/update", api.apiBlockchainFileUpdate).Methods("POST")
+    api.Router.HandleFunc("/blockchain/File/add", api.apiBlockchainFileAdd).Methods("POST")
+    api.Router.HandleFunc("/blockchain/File/list", api.apiBlockchainFileList).Methods("GET")
+    api.Router.HandleFunc("/blockchain/File/delete", api.apiBlockchainFileDelete).Methods("POST")
+    api.Router.HandleFunc("/blockchain/File/update", api.apiBlockchainFileUpdate).Methods("POST")
     api.Router.HandleFunc("/profile/list", api.apiProfileList).Methods("GET")
     api.Router.HandleFunc("/profile/read", api.apiProfileRead).Methods("GET")
     api.Router.HandleFunc("/profile/write", api.apiProfileWrite).Methods("POST")
@@ -90,17 +90,17 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
     api.Router.HandleFunc("/search/statistic", api.apiSearchStatistic).Methods("GET")
     api.Router.HandleFunc("/search/terminate", api.apiSearchTerminate).Methods("GET")
     api.Router.HandleFunc("/explore", api.apiExplore).Methods("GET")
-    api.Router.HandleFunc("/file/format", api.apiFileFormat).Methods("GET")
+    api.Router.HandleFunc("/File/format", api.apiFileFormat).Methods("GET")
     api.Router.HandleFunc("/download/start", api.apiDownloadStart).Methods("GET")
-    api.Router.HandleFunc("/download/status", api.apiDownloadStatus).Methods("GET")
+    api.Router.HandleFunc("/download/Status", api.apiDownloadStatus).Methods("GET")
     api.Router.HandleFunc("/download/action", api.apiDownloadAction).Methods("GET")
     api.Router.HandleFunc("/warehouse/create", api.apiWarehouseCreateFile).Methods("POST")
     api.Router.HandleFunc("/warehouse/create/path", api.apiWarehouseCreateFilePath).Methods("GET")
     api.Router.HandleFunc("/warehouse/read", api.apiWarehouseReadFile).Methods("GET")
     api.Router.HandleFunc("/warehouse/read/path", api.apiWarehouseReadFilePath).Methods("GET")
     api.Router.HandleFunc("/warehouse/delete", api.apiWarehouseDeleteFile).Methods("GET")
-    api.Router.HandleFunc("/file/read", api.apiFileRead).Methods("GET")
-    api.Router.HandleFunc("/file/view", api.apiFileView).Methods("GET")
+    api.Router.HandleFunc("/File/read", api.apiFileRead).Methods("GET")
+    api.Router.HandleFunc("/File/view", api.apiFileView).Methods("GET")
 
     for _, listen := range ListenAddresses {
         go startWebAPI(Backend, listen, UseSSL, CertificateFile, CertificateKey, api.Router, "API", TimeoutRead, TimeoutWrite)
@@ -109,8 +109,8 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
     return api
 }
 
-// startWebAPI starts a web-server with given parameters and logs the status. If may block forever and only returns if there is an error.
-// The certificate file and key are only used if SSL is enabled. The read and write timeout may be 0 for no timeout.
+// startWebAPI starts a web-server with given parameters and logs the Status. If may block forever and only returns if there is an error.
+// The certificate File and key are only used if SSL is enabled. The read and write timeout may be 0 for no timeout.
 func startWebAPI(Backend *core.Backend, WebListen string, UseSSL bool, CertificateFile, CertificateKey string, Handler http.Handler, Info string, ReadTimeout, WriteTimeout time.Duration) {
     Backend.LogError("startWebAPI", "Start API at '%s'\n", WebListen)
 

@@ -34,8 +34,8 @@ type SearchRequest struct {
     TerminateID []uuid.UUID `json:"terminate"`  // Optional: Previous search IDs to terminate. This is if the user makes a new search from the same tab. Same as first calling /search/terminate.
     FileType    int         `json:"filetype"`   // File type such as binary, text document etc. See core.TypeX. -1 = not used.
     FileFormat  int         `json:"fileformat"` // File format such as PDF, Word, Ebook, etc. See core.FormatX. -1 = not used.
-    SizeMin     int         `json:"sizemin"`    // Min file size in bytes. -1 = not used.
-    SizeMax     int         `json:"sizemax"`    // Max file size in bytes. -1 = not used.
+    SizeMin     int         `json:"sizemin"`    // Min File size in bytes. -1 = not used.
+    SizeMax     int         `json:"sizemax"`    // Max File size in bytes. -1 = not used.
 }
 
 // Sort orders
@@ -56,12 +56,12 @@ const (
 // SearchRequestResponse is the result to the initial search request
 type SearchRequestResponse struct {
     ID     uuid.UUID `json:"ID"`     // ID of the search job. This is used to get the results.
-    Status int       `json:"status"` // Status of the search: 0 = Success (ID valid), 1 = Invalid Term, 2 = Error Max Concurrent Searches
+    Status int       `json:"Status"` // Status of the search: 0 = Success (ID valid), 1 = Invalid Term, 2 = Error Max Concurrent Searches
 }
 
 // SearchResult contains the search results.
 type SearchResult struct {
-    Status    int         `json:"status"`    // Status: 0 = Success with results, 1 = No more results available, 2 = Search ID not found, 3 = No results yet available keep trying
+    Status    int         `json:"Status"`    // Status: 0 = Success with results, 1 = No more results available, 2 = Search ID not found, 3 = No results yet available keep trying
     Files     []ApiFile   `json:"files"`     // List of files found
     Statistic interface{} `json:"statistic"` // Statistics of all results (independent from applied filters), if requested. Only set if files are returned (= if statistics changed). See SearchStatisticData.
 }
@@ -69,7 +69,7 @@ type SearchResult struct {
 // SearchStatistic contains statistics on search results. Statistics are always calculated over all results, regardless of any applied runtime filters.
 type SearchStatistic struct {
     SearchStatisticData
-    Status       int  `json:"status"`     // Status: 0 = Success
+    Status       int  `json:"Status"`     // Status: 0 = Success
     IsTerminated bool `json:"terminated"` // Whether the search is terminated, meaning that statistics won't change
 }
 
@@ -119,11 +119,11 @@ Optional parameters:
 			&filetype=[File Type]
 			&fileformat=[File Format]
 			&from=[Date From]&to=[Date To]
-			&sizemin=[Minimum file size]
-			&sizemax=[Maximum file size]
+			&sizemin=[Minimum File size]
+			&sizemax=[Maximum File size]
 			&sort=[sort order]
 			&offset=[absolute offset] with &limit=[records] to get items pagination style. Returned items (and ones before) are automatically frozen.
-Result:     200 with JSON structure SearchResult. Check the field status.
+Result:     200 with JSON structure SearchResult. Check the field Status.
 */
 func (api *WebapiInstance) apiSearchResult(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
@@ -176,7 +176,7 @@ func (api *WebapiInstance) apiSearchResult(w http.ResponseWriter, r *http.Reques
         result.Files = append(result.Files, *resultFiles[n])
     }
 
-    // set the status
+    // set the Status
     if len(result.Files) > 0 {
         if job.IsSearchResults() {
             result.Status = 0 // 0 = Success with results
@@ -323,7 +323,7 @@ func (api *WebapiInstance) apiSearchTerminate(w http.ResponseWriter, r *http.Req
 apiSearchStatistic returns search result statistics. Statistics are always calculated over all results, regardless of any applied runtime filters.
 
 Request:    GET /search/result?ID=[UUID]
-Result:     200 with JSON structure SearchStatistic. Check the field status (0 = Success, 2 = ID not found).
+Result:     200 with JSON structure SearchStatistic. Check the field Status (0 = Success, 2 = ID not found).
 */
 func (api *WebapiInstance) apiSearchStatistic(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
@@ -346,11 +346,11 @@ func (api *WebapiInstance) apiSearchStatistic(w http.ResponseWriter, r *http.Req
 }
 
 /*
-apiExplore returns recently shared files in Peernet. Results are returned in real-time. The file type is an optional filter. See TypeX.
+apiExplore returns recently shared files in Peernet. Results are returned in real-time. The File type is an optional filter. See TypeX.
 Special type -2 = Binary, Compressed, Container, Executable. This special type includes everything except Documents, Video, Audio, Ebooks, Picture, Text.
 
-Request:    GET /explore?limit=[max records]&type=[file type]&offset=[offset]
-Result:     200 with JSON structure SearchResult. Check the field status.
+Request:    GET /explore?limit=[max records]&type=[File type]&offset=[offset]
+Result:     200 with JSON structure SearchResult. Check the field Status.
 */
 func (api *WebapiInstance) apiExplore(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()

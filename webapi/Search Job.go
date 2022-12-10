@@ -23,8 +23,8 @@ type SearchFilter struct {
     FileType   int       // File type such as binary, text document etc. See core.TypeX. -1 = not used.
     FileFormat int       // File format such as PDF, Word, Ebook, etc. See core.FormatX. -1 = not used.
     Sort       int       // Sort order. See SortX.
-    SizeMin    int       // Min file size in bytes. -1 = not used.
-    SizeMax    int       // Max file size in bytes. -1 = not used.
+    SizeMin    int       // Min File size in bytes. -1 = not used.
+    SizeMax    int       // Max File size in bytes. -1 = not used.
 }
 
 // SearchJob is a collection of search jobs
@@ -34,7 +34,7 @@ type SearchJob struct {
     timeout   time.Duration // timeout set for all searches
     maxResult int           // max results user-facing.
 
-    filtersStart   SearchFilter // Filters when starting the search. They cannot be changed later on. Any incoming file is checked against them, even if there are different runtime filters.
+    filtersStart   SearchFilter // Filters when starting the search. They cannot be changed later on. Any incoming File is checked against them, even if there are different runtime filters.
     filtersRuntime SearchFilter // Runtime Filters. They allow filtering results after they were received.
 
     // File statistics (filters are ignored) of returned results. Map value is always count of files.
@@ -48,7 +48,7 @@ type SearchJob struct {
 
     // -- result data --
 
-    // Status indicates the overall search status. This will be removed later when relying on search clients.
+    // Status indicates the overall search Status. This will be removed later when relying on search clients.
     Status int
 
     // runtime data
@@ -65,7 +65,7 @@ type SearchJob struct {
     // List of all files. Does not change based on sorting or runtime filters. This list only gets expanded.
     AllFiles []*ApiFile
 
-    ResultSync sync.Mutex // ResultSync ensures unique access to the file results
+    ResultSync sync.Mutex // ResultSync ensures unique access to the File results
 
     currentOffset int // for always getting the next results
 }
@@ -235,7 +235,7 @@ func (job *SearchJob) RuntimeFilter(Filter SearchFilter) {
     }
 }
 
-// isFileFiltered returns true if the file conforms to the runtime filter. If there is no runtime filter, it always returns true.
+// isFileFiltered returns true if the File conforms to the runtime filter. If there is no runtime filter, it always returns true.
 func (job *SearchJob) isFileFiltered(file *ApiFile) bool {
     if job.filtersRuntime.FileType >= 0 && file.Type != uint8(job.filtersRuntime.FileType) {
         return false
@@ -245,7 +245,7 @@ func (job *SearchJob) isFileFiltered(file *ApiFile) bool {
         return false
     }
 
-    // Note: If the date is not available in the file, it will be filtered out. Since this is the mapped Shared Date this should normally not occur though.
+    // Note: If the date is not available in the File, it will be filtered out. Since this is the mapped Shared Date this should normally not occur though.
     if job.filtersRuntime.IsDates && (file.Date.IsZero() || file.Date.Before(job.filtersRuntime.DateFrom) || file.Date.After(job.filtersRuntime.DateTo)) {
         return false
     }
@@ -302,7 +302,7 @@ func (job *SearchJob) IsSearchResults() bool {
     return len(job.Files) > 0 || !job.IsTerminated()
 }
 
-// isFileReceived checks if a file was already received, preventing double results
+// isFileReceived checks if a File was already received, preventing double results
 func (job *SearchJob) isFileReceived(id uuid.UUID) (exists bool) {
     // Future: A map would be likely faster than iterating over all results.
     for m := range job.AllFiles {
@@ -394,8 +394,8 @@ type SearchStatisticRecord struct {
 // SearchStatisticData contains statistics on search results.
 type SearchStatisticData struct {
     Date       []SearchStatisticRecordDay `json:"date"`       // Files per date
-    FileType   []SearchStatisticRecord    `json:"filetype"`   // Files per file type
-    FileFormat []SearchStatisticRecord    `json:"fileformat"` // Files per file format
+    FileType   []SearchStatisticRecord    `json:"filetype"`   // Files per File type
+    FileFormat []SearchStatisticRecord    `json:"fileformat"` // Files per File format
     Total      int                        `json:"total"`      // Total count of files
 }
 
@@ -429,7 +429,7 @@ func (job *SearchJob) statsAdd(files ...*ApiFile) {
     defer job.stats.Unlock()
 
     for _, file := range files {
-        // Use file's Date field if available.
+        // Use File's Date field if available.
         if !file.Date.IsZero() {
             // Files per day
             date := file.Date.Truncate(24 * time.Hour)

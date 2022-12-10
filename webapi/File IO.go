@@ -20,26 +20,26 @@ import (
 )
 
 /*
-apiFileRead reads a file immediately from a remote peer. Use the /download functions to download a file.
+apiFileRead reads a File immediately from a remote Peer. Use the /download functions to download a File.
 This endpoint supports the Range, Content-Range and Content-Length headers. Multipart ranges are not supported and result in HTTP 400.
-Instead of providing the node ID, the peer ID is also accepted in the &node= parameter.
-The default timeout for connecting to the peer is 10 seconds.
+Instead of providing the node ID, the Peer ID is also accepted in the &node= parameter.
+The default timeout for connecting to the Peer is 10 seconds.
 
-Request:    GET /file/read?hash=[hash]&node=[node ID]
+Request:    GET /File/read?Hash=[Hash]&node=[node ID]
             Optional: &offset=[offset]&limit=[limit] or via Range header.
             Optional: &timeout=[seconds]
 Response:   200 with the content
             206 with partial content
             400 if the parameters are invalid
-            404 if the file was not found or other error on transfer initiate
-            502 if unable to find or connect to the remote peer in time
+            404 if the File was not found or other error on transfer initiate
+            502 if unable to find or connect to the remote Peer in time
 */
 func (api *WebapiInstance) apiFileRead(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
     var err error
 
     // validate hashes (must be blake3) and other input
-    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
     publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
     if !valid1 || (!valid2 && err3 != nil) {
@@ -68,12 +68,12 @@ func (api *WebapiInstance) apiFileRead(w http.ResponseWriter, r *http.Request) {
         offset = ranges[0].start
     }
 
-    // Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
+    // Is the File available in the local warehouse? In that case requesting it from the remote is unnecessary.
     if serveFileFromWarehouse(api.Backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
         return
     }
 
-    // try connecting via node ID or peer ID?
+    // try connecting via node ID or Peer ID?
     var peer *core.PeerInfo
 
     if valid2 {
@@ -103,10 +103,10 @@ func (api *WebapiInstance) apiFileRead(w http.ResponseWriter, r *http.Request) {
     io.Copy(w, io.LimitReader(reader, int64(transferSize)))
 }
 
-// serveFileFromWarehouse serves the file from the warehouse. If it is not available, it returns false and does not use the writer.
-// Limit is optional, 0 means the entire file.
+// serveFileFromWarehouse serves the File from the warehouse. If it is not available, it returns false and does not use the writer.
+// Limit is optional, 0 means the entire File.
 func serveFileFromWarehouse(backend *core.Backend, w http.ResponseWriter, fileHash []byte, offset, limit uint64, ranges []HTTPRange) (valid bool) {
-    // Check if the file is available in the local warehouse.
+    // Check if the File is available in the local warehouse.
     _, fileSize, status, _ := backend.UserWarehouse.FileExists(fileHash)
     if status != warehouse.StatusOK {
         return false
@@ -127,32 +127,32 @@ func serveFileFromWarehouse(backend *core.Backend, w http.ResponseWriter, fileHa
 
     status, _, _ = backend.UserWarehouse.ReadFile(fileHash, int64(offset), int64(limit), w)
 
-    // StatusErrorReadFile must be considered success, since parts of the file may have been transferred already and recovery is not possible.
+    // StatusErrorReadFile must be considered success, since parts of the File may have been transferred already and recovery is not possible.
     return status == warehouse.StatusErrorReadFile || status == warehouse.StatusOK
 }
 
 /*
-apiFileView is similar to /file/read but but provides a format parameter. It sets the Content-Type and Accept-Ranges headers.
+apiFileView is similar to /File/read but but provides a format parameter. It sets the Content-Type and Accept-Ranges headers.
 This endpoint supports the Range, Content-Range and Content-Length headers. Multipart ranges are not supported and result in HTTP 400.
-Instead of providing the node ID, the peer ID is also accepted in the &node= parameter.
-The default timeout for connecting to the peer is 10 seconds.
+Instead of providing the node ID, the Peer ID is also accepted in the &node= parameter.
+The default timeout for connecting to the Peer is 10 seconds.
 Formats: 14 = Video
 
-Request:    GET /file/view?hash=[hash]&node=[node ID]&format=[format]
+Request:    GET /File/view?Hash=[Hash]&node=[node ID]&format=[format]
             Optional: &offset=[offset]&limit=[limit] or via Range header.
             Optional: &timeout=[seconds]
 Response:   200 with the content
             206 with partial content
             400 if the parameters are invalid
-            404 if the file was not found or other error on transfer initiate
-            502 if unable to find or connect to the remote peer in time
+            404 if the File was not found or other error on transfer initiate
+            502 if unable to find or connect to the remote Peer in time
 */
 func (api *WebapiInstance) apiFileView(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
     var err error
 
     // validate hashes (must be blake3) and other input
-    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
     publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
     if !valid1 || (!valid2 && err3 != nil) {
@@ -191,14 +191,14 @@ func (api *WebapiInstance) apiFileView(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "video/mp4")
     }
 
-    // Is the file available in the local warehouse? In that case requesting it from the remote is unnecessary.
+    // Is the File available in the local warehouse? In that case requesting it from the remote is unnecessary.
     if !localCacheDisable {
         if serveFileFromWarehouse(api.Backend, w, fileHash, uint64(offset), uint64(limit), ranges) {
             return
         }
     }
 
-    // try connecting via node ID or peer ID?
+    // try connecting via node ID or Peer ID?
     var peer *core.PeerInfo
 
     if valid2 {
@@ -228,13 +228,13 @@ func (api *WebapiInstance) apiFileView(w http.ResponseWriter, r *http.Request) {
     io.Copy(w, io.LimitReader(reader, int64(transferSize)))
 }
 
-// PeerConnectPublicKey attempts to connect to the peer specified by its public key (= peer ID).
+// PeerConnectPublicKey attempts to connect to the Peer specified by its public key (= Peer ID).
 func PeerConnectPublicKey(backend *core.Backend, publicKey *btcec.PublicKey, timeout time.Duration) (peer *core.PeerInfo, err error) {
     if publicKey == nil {
         return nil, errors.New("invalid public key")
     }
 
-    // First look up in the peer list.
+    // First look up in the Peer list.
     if peer = backend.PeerlistLookup(publicKey); peer != nil {
         return peer, nil
     }
@@ -246,7 +246,7 @@ func PeerConnectPublicKey(backend *core.Backend, publicKey *btcec.PublicKey, tim
     }
 
     // otherwise not found :(
-    return nil, errors.New("peer not found")
+    return nil, errors.New("Peer not found")
 }
 
 // PeerConnectNode tries to connect via the node ID
@@ -261,18 +261,18 @@ func PeerConnectNode(backend *core.Backend, nodeID []byte, timeout time.Duration
     }
 
     // otherwise not found :(
-    return nil, errors.New("peer not found")
+    return nil, errors.New("Peer not found")
 }
 
-// FileStartReader providers a reader to a remote file. The reader must be closed by the caller.
-// File Size is the full file size reported by the remote peer, regardless of the requested offset and limit. Limit is optional (0 means the entire file).
+// FileStartReader providers a reader to a remote File. The reader must be closed by the caller.
+// File Size is the full File size reported by the remote Peer, regardless of the requested offset and limit. Limit is optional (0 means the entire File).
 // Transfer Size is the size in bytes that is actually going to be transferred. The reader should be closed after reading that amount.
-// The optional cancelChan can be used to stop the file transfer at any point.
+// The optional cancelChan can be used to stop the File transfer at any point.
 func FileStartReader(peer *core.PeerInfo, hash []byte, offset, limit uint64, cancelChan <-chan struct{}) (reader io.ReadCloser, fileSize, transferSize uint64, err error) {
     if peer == nil {
-        return nil, 0, 0, errors.New("peer not provided")
+        return nil, 0, 0, errors.New("Peer not provided")
     } else if !peer.IsConnectionActive() {
-        return nil, 0, 0, errors.New("no valid connection to peer")
+        return nil, 0, 0, errors.New("no valid connection to Peer")
     }
 
     udtConn, virtualConn, err := peer.FileTransferRequestUDT(hash, offset, limit)
@@ -298,10 +298,10 @@ func FileStartReader(peer *core.PeerInfo, hash []byte, offset, limit uint64, can
     return udtConn, fileSize, transferSize, nil
 }
 
-// FileReadAll downloads the file from the peer.
-// This function should only be used for testing or as a basis to fork. The caller should develop a custom download function that handles timeouts and excessive file sizes.
-// It allocates whatever size is reported by the remote peer. This could lead to an out of memory crash.
-// This function is blocking and may take a long time depending on the remote peer and the network connection.
+// FileReadAll downloads the File from the Peer.
+// This function should only be used for testing or as a basis to fork. The caller should develop a custom download function that handles timeouts and excessive File sizes.
+// It allocates whatever size is reported by the remote Peer. This could lead to an out of memory crash.
+// This function is blocking and may take a long time depending on the remote Peer and the network connection.
 func FileReadAll(peer *core.PeerInfo, hash []byte) (data []byte, err error) {
     reader, _, transferSize, err := FileStartReader(peer, hash, 0, 0, nil)
     if err != nil {
@@ -313,7 +313,7 @@ func FileReadAll(peer *core.PeerInfo, hash []byte) (data []byte, err error) {
     data = make([]byte, transferSize) // Warning: This could lead to an out of memory crash.
     _, err = reader.Read(data)
 
-    // Note: This function does not verify if the returned data matches the hash and expected size.
+    // Note: This function does not verify if the returned data matches the Hash and expected size.
 
     return data, err
 }

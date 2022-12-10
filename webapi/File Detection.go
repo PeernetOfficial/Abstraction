@@ -15,7 +15,7 @@ import (
     "github.com/PeernetOfficial/core"
 )
 
-// PathToExtension translates a path to a file extension, if possible. It also returns the second file extension if there is one (relevant for files like "test.tar.gz").
+// PathToExtension translates a path to a File extension, if possible. It also returns the second File extension if there is one (relevant for files like "test.tar.gz").
 func PathToExtension(Path string) (extension, extension2 string, valid bool) {
     _, fileA := path.Split(Path)
 
@@ -143,7 +143,7 @@ func HTTPContentTypeToCore(httpContentType string) (fileType, fileFormat uint16)
     }
 }
 
-// FileDataToHTTPContentType returns the HTTP content type based on the initial file data. It reads the first 512 bytes of the file.
+// FileDataToHTTPContentType returns the HTTP content type based on the initial File data. It reads the first 512 bytes of the File.
 func FileDataToHTTPContentType(Path string) (httpContentType string, err error) {
     file, err := os.Open(Path)
     if err != nil {
@@ -172,10 +172,10 @@ func FileDataToHTTPContentType(Path string) (httpContentType string, err error) 
     return httpContentType, nil
 }
 
-// FileDetectType detects the File Type and File Format of a file. It uses the extension if available, otherwise the file data, for detection.
+// FileDetectType detects the File Type and File Format of a File. It uses the extension if available, otherwise the File data, for detection.
 func FileDetectType(Path string) (fileType, fileFormat uint16, err error) {
-    // If a file extension is available, use that to detect the file type and file format.
-    // Otherwise, use the initial file data for detection.
+    // If a File extension is available, use that to detect the File type and File format.
+    // Otherwise, use the initial File data for detection.
     if ext1, _, valid := PathToExtension(Path); valid {
         fileType, fileFormat = FileTranslateExtension(ext1)
         return fileType, fileFormat, nil
@@ -191,16 +191,16 @@ func FileDetectType(Path string) (fileType, fileFormat uint16, err error) {
 }
 
 type apiResponseFileFormat struct {
-    Status     int    `json:"status"`     // Status: 0 = Success, 1 = Error reading file
+    Status     int    `json:"Status"`     // Status: 0 = Success, 1 = Error reading File
     FileType   uint16 `json:"filetype"`   // File Type.
     FileFormat uint16 `json:"fileformat"` // File Format.
 }
 
 /*
-apiFileFormat detects the file type and file format of the specified file.
-It will primarily use the file extension for detection. If unavailable, it uses the first 512 bytes of the file data to detect the type.
+apiFileFormat detects the File type and File format of the specified File.
+It will primarily use the File extension for detection. If unavailable, it uses the first 512 bytes of the File data to detect the type.
 
-Request:    GET /file/format?path=[file path on disk]
+Request:    GET /File/format?path=[File path on disk]
 Result:     200 with JSON structure apiResponseFileFormat
 */
 func (api *WebapiInstance) apiFileFormat(w http.ResponseWriter, r *http.Request) {

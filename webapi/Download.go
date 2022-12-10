@@ -19,51 +19,51 @@ import (
     "github.com/google/uuid"
 )
 
-type apiResponseDownloadStatus struct {
+type ApiResponseDownloadStatus struct {
     APIStatus      int       `json:"apistatus"`      // Status of the API call. See DownloadResponseX.
-    ID             uuid.UUID `json:"ID"`             // Download ID. This can be used to query the latest status and take actions.
+    ID             uuid.UUID `json:"ID"`             // Download ID. This can be used to query the latest Status and take actions.
     DownloadStatus int       `json:"downloadstatus"` // Status of the download. See DownloadX.
-    File           ApiFile   `json:"file"`           // File information. Only available for status >= DownloadWaitSwarm.
+    File           ApiFile   `json:"File"`           // File information. Only available for Status >= DownloadWaitSwarm.
     Progress       struct {
         TotalSize      uint64  `json:"totalsize"`      // Total size in bytes.
         DownloadedSize uint64  `json:"downloadedsize"` // Count of bytes download so far.
         Percentage     float64 `json:"percentage"`     // Percentage downloaded. Rounded to 2 decimal points. Between 0.00 and 100.00.
-    } `json:"progress"` // Progress of the download. Only valid for status >= DownloadWaitSwarm.
+    } `json:"progress"` // Progress of the download. Only valid for Status >= DownloadWaitSwarm.
     Swarm struct {
         CountPeers uint64 `json:"countpeers"` // Count of peers participating in the swarm.
-    } `json:"swarm"` // Information about the swarm. Only valid for status >= DownloadActive.
+    } `json:"swarm"` // Information about the swarm. Only valid for Status >= DownloadActive.
 }
 
 const (
     DownloadResponseSuccess       = 0 // Success
     DownloadResponseIDNotFound    = 1 // Error: Download ID not found.
-    DownloadResponseFileInvalid   = 2 // Error: Target file cannot be used. For example, permissions denied to create it.
+    DownloadResponseFileInvalid   = 2 // Error: Target File cannot be used. For example, permissions denied to create it.
     DownloadResponseActionInvalid = 4 // Error: Invalid action. Pausing a non-active download, resuming a non-paused download, or canceling already canceled or finished download.
-    DownloadResponseFileWrite     = 5 // Error writing file.
+    DownloadResponseFileWrite     = 5 // Error writing File.
 )
 
-// Download status list
+// Download Status list
 const (
-    DownloadWaitMetadata = 0 // Wait for file metadata.
+    DownloadWaitMetadata = 0 // Wait for File metadata.
     DownloadWaitSwarm    = 1 // Wait to join swarm.
     DownloadActive       = 2 // Active downloading. It could still be stuck at any percentage (including 0%) if no seeders are available.
     DownloadPause        = 3 // Paused by the user.
-    DownloadCanceled     = 4 // Canceled by the user before the download finished. Once canceled, a new download has to be started if the file shall be downloaded.
+    DownloadCanceled     = 4 // Canceled by the user before the download finished. Once canceled, a new download has to be started if the File shall be downloaded.
     DownloadFinished     = 5 // Download finished 100%.
 )
 
 /*
-apiDownloadStart starts the download of a file. The path is the full path on disk to store the file.
-The hash parameter identifies the file to download. The node ID identifies the blockchain (i.e., the "owner" of the file).
+apiDownloadStart starts the download of a File. The path is the full path on disk to store the File.
+The Hash parameter identifies the File to download. The node ID identifies the blockchain (i.e., the "owner" of the File).
 
-Request:    GET /download/start?path=[target path on disk]&hash=[file hash to download]&node=[node ID]
-Result:     200 with JSON structure apiResponseDownloadStatus
+Request:    GET /download/start?path=[target path on disk]&Hash=[File Hash to download]&node=[node ID]
+Result:     200 with JSON structure ApiResponseDownloadStatus
 */
 func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
 
     // validate hashes, must be blake3
-    hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    hash, valid1 := DecodeBlake3Hash(r.Form.Get("Hash"))
     nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
     if !valid1 || !valid2 {
         http.Error(w, "", http.StatusBadRequest)
@@ -76,28 +76,28 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
         return
     }
 
-    info := &downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID}
+    info := &DownloadInfo{Backend: api.Backend, Api: api, ID: uuid.New(), Created: time.Now(), Hash: hash, NodeID: nodeID}
 
-    // create the file immediately
-    if info.initDiskFile(filePath) != nil {
-        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
+    // create the File immediately
+    if info.InitDiskFile(filePath) != nil {
+        EncodeJSON(api.Backend, w, r, ApiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
         return
     }
 
     // add the download to the list
-    api.downloadAdd(info)
+    api.DownloadAdd(info)
 
     // start the download!
     go info.Start()
 
-    EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
+    EncodeJSON(api.Backend, w, r, ApiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.ID, DownloadStatus: DownloadWaitMetadata})
 }
 
 /*
-apiDownloadStatus returns the status of an active download.
+apiDownloadStatus returns the Status of an active download.
 
-Request:    GET /download/status?ID=[download ID]
-Result:     200 with JSON structure apiResponseDownloadStatus
+Request:    GET /download/Status?ID=[download ID]
+Result:     200 with JSON structure ApiResponseDownloadStatus
 */
 func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
@@ -107,26 +107,26 @@ func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Requ
         return
     }
 
-    info := api.downloadLookup(id)
+    info := api.DownloadLookup(id)
     if info == nil {
-        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
+        EncodeJSON(api.Backend, w, r, ApiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
         return
     }
 
     info.RLock()
 
-    response := apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: info.status}
+    response := ApiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.ID, DownloadStatus: info.Status}
 
-    if info.status >= DownloadWaitSwarm {
-        response.File = info.file
+    if info.Status >= DownloadWaitSwarm {
+        response.File = info.File
 
-        response.Progress.TotalSize = info.file.Size
+        response.Progress.TotalSize = info.File.Size
         response.Progress.DownloadedSize = info.DiskFile.StoredSize
 
-        response.Progress.Percentage = math.Round(float64(info.DiskFile.StoredSize)/float64(info.file.Size)*100*100) / 100
+        response.Progress.Percentage = math.Round(float64(info.DiskFile.StoredSize)/float64(info.File.Size)*100*100) / 100
     }
 
-    if info.status >= DownloadActive {
+    if info.Status >= DownloadActive {
         response.Swarm.CountPeers = info.Swarm.CountPeers
     }
 
@@ -136,12 +136,12 @@ func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Requ
 }
 
 /*
-apiDownloadAction pauses, resumes, and cancels a download. Once canceled, a new download has to be started if the file shall be downloaded.
+apiDownloadAction pauses, resumes, and cancels a download. Once canceled, a new download has to be started if the File shall be downloaded.
 Only active downloads can be paused. While a download is in discovery phase (querying metadata, joining swarm), it can only be canceled.
 Action: 0 = Pause, 1 = Resume, 2 = Cancel.
 
 Request:    GET /download/action?ID=[download ID]&action=[action]
-Result:     200 with JSON structure apiResponseDownloadStatus (using APIStatus and DownloadStatus)
+Result:     200 with JSON structure ApiResponseDownloadStatus (using APIStatus and DownloadStatus)
 */
 func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
@@ -152,9 +152,9 @@ func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Requ
         return
     }
 
-    info := api.downloadLookup(id)
+    info := api.DownloadLookup(id)
     if info == nil {
-        EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
+        EncodeJSON(api.Backend, w, r, ApiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
         return
     }
 
@@ -171,56 +171,56 @@ func (api *WebapiInstance) apiDownloadAction(w http.ResponseWriter, r *http.Requ
         apiStatus = info.Cancel()
     }
 
-    EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: apiStatus, ID: info.id, DownloadStatus: info.status})
+    EncodeJSON(api.Backend, w, r, ApiResponseDownloadStatus{APIStatus: apiStatus, ID: info.ID, DownloadStatus: info.Status})
 }
 
 // ---- download tracking ----
 
-type downloadInfo struct {
-    id           uuid.UUID // Download ID
-    status       int       // Current status. See DownloadX.
-    sync.RWMutex           // Mutext for changing the status
+type DownloadInfo struct {
+    ID           uuid.UUID // Download ID
+    Status       int       // Current Status. See DownloadX.
+    sync.RWMutex           // Mutext for changing the Status
 
     // input
-    hash   []byte // File hash
-    nodeID []byte // Node ID of the owner
+    Hash   []byte // File Hash
+    NodeID []byte // Node ID of the owner
 
     // runtime data
-    created time.Time // When the download was created.
-    ended   time.Time // When the download was finished (only status = DownloadFinished).
+    Created time.Time // When the download was Created.
+    Ended   time.Time // When the download was finished (only Status = DownloadFinished).
 
-    file ApiFile // File metadata (only status >= DownloadWaitSwarm)
+    File ApiFile // File metadata (only Status >= DownloadWaitSwarm)
 
-    DiskFile struct { // Target file on disk to store downloaded data
+    DiskFile struct { // Target File on disk to store downloaded data
         Name       string   // File name
-        Handle     *os.File // Target file (on disk) to store downloaded data
-        StoredSize uint64   // Count of bytes downloaded and stored in the file
+        Handle     *os.File // Target File (on disk) to store downloaded data
+        StoredSize uint64   // Count of bytes downloaded and stored in the File
     }
 
-    Swarm struct { // Information about the swarm. Only valid for status >= DownloadActive.
+    Swarm struct { // Information about the swarm. Only valid for Status >= DownloadActive.
         CountPeers uint64 // Count of peers participating in the swarm.
     }
 
     // live connections, to be changed
-    peer *core.PeerInfo
+    Peer *core.PeerInfo
 
-    api     *WebapiInstance
-    backend *core.Backend
+    Api     *WebapiInstance
+    Backend *core.Backend
 }
 
-func (api *WebapiInstance) downloadAdd(info *downloadInfo) {
+func (api *WebapiInstance) DownloadAdd(info *DownloadInfo) {
     api.downloadsMutex.Lock()
-    api.downloads[info.id] = info
+    api.downloads[info.ID] = info
     api.downloadsMutex.Unlock()
 }
 
-func (api *WebapiInstance) downloadDelete(id uuid.UUID) {
+func (api *WebapiInstance) DownloadDelete(id uuid.UUID) {
     api.downloadsMutex.Lock()
     delete(api.downloads, id)
     api.downloadsMutex.Unlock()
 }
 
-func (api *WebapiInstance) downloadLookup(id uuid.UUID) (info *downloadInfo) {
+func (api *WebapiInstance) DownloadLookup(id uuid.UUID) (info *DownloadInfo) {
     api.downloadsMutex.Lock()
     info = api.downloads[id]
     api.downloadsMutex.Unlock()
@@ -229,14 +229,14 @@ func (api *WebapiInstance) downloadLookup(id uuid.UUID) (info *downloadInfo) {
 
 // DeleteDefer deletes the download from the downloads list after the given duration.
 // It does not wait for the download to be finished.
-func (info *downloadInfo) DeleteDefer(Duration time.Duration) {
+func (info *DownloadInfo) DeleteDefer(Duration time.Duration) {
     go func() {
         <-time.After(Duration)
-        info.api.downloadDelete(info.id)
+        info.Api.DownloadDelete(info.ID)
     }()
 }
 
-// DecodeBlake3Hash decodes a blake3 hash that is hex encoded
+// DecodeBlake3Hash decodes a blake3 Hash that is hex encoded
 func DecodeBlake3Hash(text string) (hash []byte, valid bool) {
     hash, err := hex.DecodeString(text)
     return hash, err == nil && len(hash) == 256/8

@@ -29,18 +29,18 @@ type ApiFileMetadata struct {
     Number uint64    `json:"number"` // Number
 }
 
-// ApiFile is the metadata of a file published on the blockchain
+// ApiFile is the metadata of a File published on the blockchain
 type ApiFile struct {
     ID          uuid.UUID         `json:"ID"`          // Unique ID.
-    Hash        []byte            `json:"hash"`        // Blake3 hash of the file data
+    Hash        []byte            `json:"Hash"`        // Blake3 Hash of the File data
     Type        uint8             `json:"type"`        // File Type. For example audio or document. See TypeX.
-    Format      uint16            `json:"format"`      // File Format. This is more granular, for example PDF or Word file. See FormatX.
-    Size        uint64            `json:"size"`        // Size of the file
+    Format      uint16            `json:"format"`      // File Format. This is more granular, for example PDF or Word File. See FormatX.
+    Size        uint64            `json:"size"`        // Size of the File
     Folder      string            `json:"folder"`      // Folder, optional
-    Name        string            `json:"name"`        // Name of the file
+    Name        string            `json:"name"`        // Name of the File
     Description string            `json:"description"` // Description. This is expected to be multiline and contain hashtags!
     Date        time.Time         `json:"date"`        // Date shared
-    NodeID      []byte            `json:"nodeid"`      // Node ID, owner of the file. Read only.
+    NodeID      []byte            `json:"nodeid"`      // Node ID, owner of the File. Read only.
     Metadata    []ApiFileMetadata `json:"metadata"`    // Additional metadata.
 }
 
@@ -118,17 +118,17 @@ func BlockRecordFileFromAPI(input ApiFile) (output blockchain.BlockRecordFile) {
 // ApiBlockAddFiles contains a list of files from the blockchain
 type ApiBlockAddFiles struct {
     Files  []ApiFile `json:"files"`  // List of files
-    Status int       `json:"status"` // Status of the operation, only used when this structure is returned from the API.
+    Status int       `json:"Status"` // Status of the operation, only used when this structure is returned from the API.
 }
 
 /*
-apiBlockchainFileAdd adds a file with the provided information to the blockchain.
-Each file must be already stored in the Warehouse (virtual folders are exempt).
-If any file is not stored in the Warehouse, the function aborts with the status code StatusNotInWarehouse.
-If the block record encoding fails for any file, this function aborts with the status code StatusCorruptBlockRecord.
+apiBlockchainFileAdd adds a File with the provided information to the blockchain.
+Each File must be already stored in the Warehouse (virtual folders are exempt).
+If any File is not stored in the Warehouse, the function aborts with the Status code StatusNotInWarehouse.
+If the block record encoding fails for any File, this function aborts with the Status code StatusCorruptBlockRecord.
 In case the function aborts, the blockchain remains unchanged.
 
-Request:    POST /blockchain/file/add with JSON structure ApiBlockAddFiles
+Request:    POST /blockchain/File/add with JSON structure ApiBlockAddFiles
 Response:   200 with JSON structure apiBlockchainBlockStatus
 			400 if invalid input
 */
@@ -149,7 +149,7 @@ func (api *WebapiInstance) apiBlockchainFileAdd(w http.ResponseWriter, r *http.R
             file.ID = uuid.New()
         }
 
-        // Verify that the file exists in the warehouse. Folders are exempt from this check as they are only virtual.
+        // Verify that the File exists in the warehouse. Folders are exempt from this check as they are only virtual.
         if !file.IsVirtualFolder() {
             if _, err := warehouse.ValidateHash(file.Hash); err != nil {
                 http.Error(w, "", http.StatusBadRequest)
@@ -184,7 +184,7 @@ func (api *WebapiInstance) apiBlockchainFileAdd(w http.ResponseWriter, r *http.R
 /*
 apiBlockchainFileList lists all files stored on the blockchain.
 
-Request:    GET /blockchain/file/list
+Request:    GET /blockchain/File/list
 Response:   200 with JSON structure ApiBlockAddFiles
 */
 func (api *WebapiInstance) apiBlockchainFileList(w http.ResponseWriter, r *http.Request) {
@@ -203,9 +203,9 @@ func (api *WebapiInstance) apiBlockchainFileList(w http.ResponseWriter, r *http.
 
 /*
 apiBlockchainFileDelete deletes files with the provided IDs. Other fields are ignored.
-It will automatically delete the file in the Warehouse if there are no other references.
+It will automatically delete the File in the Warehouse if there are no other references.
 
-Request:    POST /blockchain/file/delete with JSON structure ApiBlockAddFiles
+Request:    POST /blockchain/File/delete with JSON structure ApiBlockAddFiles
 Response:   200 with JSON structure apiBlockchainBlockStatus
 */
 func (api *WebapiInstance) apiBlockchainFileDelete(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +237,7 @@ func (api *WebapiInstance) apiBlockchainFileDelete(w http.ResponseWriter, r *htt
 /*
 apiBlockchainSelfUpdateFile updates files that are already published on the blockchain.
 
-Request:    POST /blockchain/file/update with JSON structure ApiBlockAddFiles
+Request:    POST /blockchain/File/update with JSON structure ApiBlockAddFiles
 Response:   200 with JSON structure apiBlockchainBlockStatus
 			400 if invalid input
 */
@@ -258,7 +258,7 @@ func (api *WebapiInstance) apiBlockchainFileUpdate(w http.ResponseWriter, r *htt
             return
         }
 
-        // Verify that the file exists in the warehouse. Folders are exempt from this check as they are only virtual.
+        // Verify that the File exists in the warehouse. Folders are exempt from this check as they are only virtual.
         if !file.IsVirtualFolder() {
             if _, err := warehouse.ValidateHash(file.Hash); err != nil {
                 http.Error(w, "", http.StatusBadRequest)
@@ -312,7 +312,7 @@ func (info *ApiFileMetadata) GetNumber() uint64 {
     return info.Number
 }
 
-// IsVirtualFolder returns true if the file is a virtual folder
+// IsVirtualFolder returns true if the File is a virtual folder
 func (file *ApiFile) IsVirtualFolder() bool {
     return file.Type == core.TypeFolder && file.Format == core.FormatFolder
 }
@@ -324,7 +324,7 @@ func SetFileMerkleInfo(backend *core.Backend, file *blockchain.BlockRecordFile) 
         file.MerkleRootHash = file.Hash
         file.FragmentSize = merkle.MinimumFragmentSize
     } else {
-        // Get the information from the Warehouse .merkle companion file.
+        // Get the information from the Warehouse .merkle companion File.
         tree, status, _ := backend.UserWarehouse.ReadMerkleTree(file.Hash, true)
         if status != warehouse.StatusOK {
             return false

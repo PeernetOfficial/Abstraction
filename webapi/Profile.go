@@ -16,7 +16,7 @@ import (
 // apiProfileData contains profile metadata stored on the blockchain. Any data is treated as untrusted and unverified by default.
 type apiProfileData struct {
     Fields []apiBlockRecordProfile `json:"fields"` // All fields
-    Status int                     `json:"status"` // Status of the operation, only used when this structure is returned from the API. See blockchain.StatusX.
+    Status int                     `json:"Status"` // Status of the operation, only used when this structure is returned from the API. See blockchain.StatusX.
 }
 
 // apiBlockRecordProfile provides information about the end user. Note that all profile data is arbitrary and shall be considered untrusted and unverified.

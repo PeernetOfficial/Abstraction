@@ -14,6 +14,7 @@ import (
     "github.com/PeernetOfficial/core/protocol"
     "github.com/PeernetOfficial/core/warehouse"
     "github.com/google/uuid"
+    "math"
     "path/filepath"
     "time"
 )
@@ -229,4 +230,73 @@ func SearchResult(api *webapi.WebapiInstance, jobID uuid.UUID) (*webapi.SearchRe
     }
 
     return nil, errors.New("search not successful")
+}
+
+// Download and abstracted function that starts downloading a file
+// and returns the ID which can be used to track the files
+// download status
+func Download(api *webapi.WebapiInstance, hashStr string, nodeIDStr string, path string) (*uuid.UUID, error) {
+    // validate hashes, must be blake3
+    hash, valid1 := webapi.DecodeBlake3Hash(hashStr)
+    nodeID, valid2 := webapi.DecodeBlake3Hash(nodeIDStr)
+    if !valid1 || !valid2 {
+        //http.Error(w, "", http.StatusBadRequest)
+        return nil, errors.New("hash or node ID was not valid")
+    }
+
+    filePath := path
+    if filePath == "" {
+        // http.Error(w, "", http.StatusBadRequest)
+        return nil, errors.New("file path not provided")
+    }
+
+    ID := uuid.New()
+
+    info := &webapi.DownloadInfo{Backend: api.Backend, Api: api, ID: ID, Created: time.Now(), Hash: hash, NodeID: nodeID}
+
+    // create the file immediately
+    err := info.InitDiskFile(filePath)
+    if err != nil {
+        return nil, err
+    }
+
+    // add the download to the list
+    api.DownloadAdd(info)
+
+    // start the download!
+    go info.Start()
+
+    return &ID, nil
+}
+
+// DownloadStatus Abstracted function that finds the status of a downloaded files
+// based on the download ID provided and returns with the appropriate information 
+func DownloadStatus(api *webapi.WebapiInstance, DownloadID *uuid.UUID) (*webapi.ApiResponseDownloadStatus, error) {
+
+    info := api.DownloadLookup(*DownloadID)
+    if info == nil {
+        //EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseIDNotFound})
+        return nil, errors.New("download ID not found")
+    }
+
+    info.RLock()
+
+    response := webapi.ApiResponseDownloadStatus{APIStatus: webapi.DownloadResponseSuccess, ID: info.ID, DownloadStatus: info.Status}
+
+    if info.Status >= webapi.DownloadWaitSwarm {
+        response.File = info.File
+
+        response.Progress.TotalSize = info.File.Size
+        response.Progress.DownloadedSize = info.DiskFile.StoredSize
+
+        response.Progress.Percentage = math.Round(float64(info.DiskFile.StoredSize)/float64(info.File.Size)*100*100) / 100
+    }
+
+    if info.Status >= webapi.DownloadActive {
+        response.Swarm.CountPeers = info.Swarm.CountPeers
+    }
+
+    info.RUnlock()
+
+    return &response, nil
 }

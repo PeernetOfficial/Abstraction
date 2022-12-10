@@ -19,17 +19,17 @@ func apiTest(w http.ResponseWriter, r *http.Request) {
 }
 
 type apiResponseStatus struct {
-    Status        int  `json:"status"`        // Status code: 0 = Ok.
+    Status        int  `json:"Status"`        // Status code: 0 = Ok.
     IsConnected   bool `json:"isconnected"`   // Whether connected to Peernet.
-    CountPeerList int  `json:"countpeerlist"` // Count of peers in the peer list. Note that this contains peers that are considered inactive, but have not yet been removed from the list.
+    CountPeerList int  `json:"countpeerlist"` // Count of peers in the Peer list. Note that this contains peers that are considered inactive, but have not yet been removed from the list.
     CountNetwork  int  `json:"countnetwork"`  // Count of total peers in the network.
     // This is usually a higher number than CountPeerList, which just represents the current number of connected peers.
     // The CountNetwork number is going to be queried from root peers which may or may not have a limited view.
 }
 
 /*
-apiStatus returns the current connectivity status to the network
-Request:    GET /status
+apiStatus returns the current connectivity Status to the network
+Request:    GET /Status
 Result:     200 with JSON structure Status
 */
 func (api *WebapiInstance) apiStatus(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +46,7 @@ func (api *WebapiInstance) apiStatus(w http.ResponseWriter, r *http.Request) {
 
 type apiResponsePeerSelf struct {
     PeerID string `json:"peerid"` // Peer ID. This is derived from the public in compressed form.
-    NodeID string `json:"nodeid"` // Node ID. This is the blake3 hash of the peer ID and used in the DHT.
+    NodeID string `json:"nodeid"` // Node ID. This is the blake3 Hash of the Peer ID and used in the DHT.
 }
 
 /*
@@ -85,10 +85,10 @@ func (api *WebapiInstance) apiAccountDelete(w http.ResponseWriter, r *http.Reque
 
 /*
 apiStatusPeers returns the information about peers currently connected.
-The GeoIP information may not alawys be available, for example if the GeoIP file is not available or the mapping from IP address to location is not available.
+The GeoIP information may not alawys be available, for example if the GeoIP File is not available or the mapping from IP address to location is not available.
 Peers that are connected only via local network will not have a geo location.
 
-Request:    GET /status/peers
+Request:    GET /Status/peers
 Result:     200 with JSON array apiResponsePeerInfo
 */
 func (api *WebapiInstance) apiStatusPeers(w http.ResponseWriter, r *http.Request) {
@@ -117,10 +117,10 @@ func (api *WebapiInstance) apiStatusPeers(w http.ResponseWriter, r *http.Request
 
 type apiResponsePeerInfo struct {
     PeerID            []byte `json:"peerid"`            // Peer ID. This is derived from the public in compressed form.
-    NodeID            []byte `json:"nodeid"`            // Node ID. This is the blake3 hash of the peer ID and used in the DHT.
+    NodeID            []byte `json:"nodeid"`            // Node ID. This is the blake3 Hash of the Peer ID and used in the DHT.
     GeoIP             string `json:"geoip"`             // GeoIP location as "Latitude,Longitude" CSV format. Empty if location not available.
     UserAgent         string `json:"useragent"`         // User Agent.
-    IsRoot            bool   `json:"isroot"`            // If the peer is a root peer.
+    IsRoot            bool   `json:"isroot"`            // If the Peer is a root Peer.
     BlockchainHeight  uint64 `json:"blockchainheight"`  // Blockchain height
     BlockchainVersion uint64 `json:"blockchainversion"` // Blockchain version
 }

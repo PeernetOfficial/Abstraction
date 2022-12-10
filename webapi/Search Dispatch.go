@@ -48,7 +48,7 @@ resultLoop:
             continue
         }
 
-        // Deduplicate based on file hash from the same peer.
+        // Deduplicate based on File Hash from the same Peer.
         for n := range job.AllFiles {
             if bytes.Equal(job.AllFiles[n].Hash, file.Hash) && bytes.Equal(job.AllFiles[n].NodeID, file.NodeID) {
                 continue resultLoop

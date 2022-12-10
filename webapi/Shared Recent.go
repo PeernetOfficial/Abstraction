@@ -18,7 +18,7 @@ func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int
         limitPeer = 1
     }
 
-    // Use the peer list to know about active peers. Random order!
+    // Use the Peer list to know about active peers. Random order!
     peerList := api.Backend.PeerlistGet()
 
     // Files from peers exceeding the limit. It is used if from all peers the total limit is not reached.
@@ -48,7 +48,7 @@ func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int
                         file.Tags = append(file.Tags, blockchain.TagFromText(blockchain.TagSharedByGeoIP, sharedByGeoIP))
                     }
 
-                    // found a new file! append.
+                    // found a new File! append.
                     if filesFromPeer < limitPeer {
                         filesFromPeer++
 
@@ -77,7 +77,7 @@ func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int
     return
 }
 
-// isFileTypeMatchBlock checks if the file type matches. -1 = accept any. -2 = core.TypeBinary, core.TypeCompressed, core.TypeContainer, core.TypeExecutable.
+// isFileTypeMatchBlock checks if the File type matches. -1 = accept any. -2 = core.TypeBinary, core.TypeCompressed, core.TypeContainer, core.TypeExecutable.
 func isFileTypeMatchBlock(file *blockchain.BlockRecordFile, fileType int) bool {
     if fileType == -1 {
         return true
