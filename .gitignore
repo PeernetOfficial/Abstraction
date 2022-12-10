@@ -1,0 +1,7 @@
+.DS_Store
+*.exe
+log.txt
+*debug_bin
+test.*
+# Ignore the IDE gitignore files
+.idea/
