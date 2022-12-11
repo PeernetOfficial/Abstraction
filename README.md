@@ -15,10 +15,10 @@ Abstrations.Download(&<web api object>,<file hash>,<node id>,<download path>)
 ```
 ### Add a file to peernet 
 ```go
-Abstrations.Touch(&<web api object>, <file path>)
+Abstrations.Touch(&<web api object>,<file path>)
 ```
 
 ### Remove a file to peernet 
 ```go
-Abstrations.Rm(&<web api object>, <file id>)
+Abstrations.Rm(&<web api object>,<file id>)
 ```
