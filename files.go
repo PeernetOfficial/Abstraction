@@ -148,8 +148,10 @@ func Search(api *webapi.WebapiInstance, term string) (*webapi.SearchResult, erro
         return nil, err
     }
 
+    // Running search
+
     // 6 seconds
-    time.Sleep(1000 * 6)
+    time.Sleep(time.Millisecond * 6000)
 
     result, err := SearchResult(api, jobID)
     if err != nil {

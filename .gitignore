@@ -5,3 +5,6 @@ log.txt
 test.*
 # Ignore the IDE gitignore files
 .idea/
+example
+Config.yaml
+data/
