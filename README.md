@@ -22,3 +22,5 @@ Abstrations.Touch(&<web api object>,<file path>)
 ```go
 Abstrations.Rm(&<web api object>,<file id>)
 ```
+
+### An Example workflow can be found here (https://github.com/PeernetOfficial/Abstraction/blob/main/example/example.go)
