@@ -1,8 +1,12 @@
-# Peernet: An easy way to extend p2p capabilities to your go program"
+---
+title: "Peernet: An easy way to extend p2p capabilities to your go program"
+publishDate: 2022-12-11
+authors: ["akilan-selvacoumar"]
+---
 
-Today we are going to explore [Peernet](https://peernet.org) a p2p protocol designed for file sharing. But the main objective being simple to use and powerful at the same time. Out of personal experience extending regular application with p2p capabilities has always been a nightmare. The standard problems would be how do I talk to nodes behind NAT, how do I discover nodes in a p2p network etc... If you ask the current community of go developers, IPFS would be considered as the standard solution. When building my 
-initial project [p2prc](https://github.com/Akilan1999/p2p-rendering-computation) I did consider trying to extend it with IPFS. The end result was that it was easier writing your own p2p network than extending IPFS with Libp2p (This was a huge nightmare in my case). Encountering Peernet did checkmark most of the reasons 
-for a good protocol to extend go applications with p2p capabilities. Peernet is an amazing well abstracted p2p network which utilizes UDT to transfer files which support of UPNP and UDP hole punching to support talking to nodes behind NAT. There are even more nice features such as a clean decentralized search etc...
+Today we are going to explore [Peernet](https://peernet.org) a p2p protocol designed for file sharing. But the main objective being simple to use and powerful at the same time. Out of my personal experience extending regular application with p2p capabilities,this has always been a nightmare. The standard problems would be how do I talk to nodes behind NAT, how do I discover nodes in a p2p network etc... If you ask the current community of go developers, IPFS would be considered as the standard solution. When building my 
+initial project [p2prc](https://github.com/Akilan1999/p2p-rendering-computation), I did consider trying to extend it with IPFS. The end result was that it was easier writing your own p2p network than extending IPFS with Libp2p (This was a huge nightmare in my case). Encountering Peernet did checkmark most of the reasons 
+for a good protocol to extend go applications with p2p capabilities. Peernet is an amazing well abstracted p2p network which utilizes [UDT](https://udt.sourceforge.io) to transfer files with the support of UPNP and UDP hole punching to support talking to nodes behind NAT. There are even more nice features such as a clean decentralized search etc...
 
 
 ## Steps to get stated 
@@ -11,7 +15,8 @@ The Peernet abstraction library helps extend a go program with p2p capabilities 
 calls.)
 
 ### Write a the boiler plate code 
-This is the go main function with Peernet started:
+This is the go ```main``` function with the Peernet boiler plate code needed to get 
+started:
 ```go
 package main
 
@@ -133,6 +138,9 @@ err = Abstrations.Rm(api, file.ID)
 ## More information 
 The full source code to abstractions repo can found here
 - https://github.com/PeernetOfficial/Abstraction 
+> **_NOTE:_** This repo was created particularly for the following blog post. This 
+repo will get deprecated once these functions are officially supported in the 
+peernet core [repo](https://github.com/PeernetOfficial/core).
 
 The example of the following flow: 
 - https://github.com/PeernetOfficial/Abstraction/blob/main/example/example.go
@@ -145,6 +153,3 @@ Official Cmd repo:
 
 White paper: 
 - https://peernet.org/dl/Peernet%20Whitepaper.pdf
-
-
-
