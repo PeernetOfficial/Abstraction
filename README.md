@@ -4,6 +4,8 @@
 The following repo was created for the GoAdvent blog post. The objective to prove how easy it's to extend your Go application with p2p capabilites 
 using Peernet. 
 
+### Bost post: https://gopheradvent.com/calendar/2022/peernet-protocol/
+
 ## Function calls supported 
 ### Search a file: 
 ```go
