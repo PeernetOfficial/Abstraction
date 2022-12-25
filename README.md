@@ -1,7 +1,7 @@
 # Abstraction
 > **_NOTE:_** This is temporary repo for better abstraction calls for the Peernet core repo. This is expected to be deprecated once the core officially supports strong abstractions.
 
-The following repo was created for the GoAdvent blog post. The objective is to prove how easy it's to extend your Go application with p2p capabilites 
+The following repo was created for the GopherAdvent blog post. The objective is to prove how easy it's to extend your Go application with p2p capabilites 
 using Peernet. 
 
 ### Blog post: https://gopheradvent.com/calendar/2022/peernet-protocol/
