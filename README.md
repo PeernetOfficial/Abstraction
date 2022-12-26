@@ -1,5 +1,5 @@
 # Abstraction
-> **_NOTE:_** This is temporary repo for better abstraction calls for the Peernet core repo. This is expected to be deprecated once the core officially supports strong abstractions.
+> **_NOTE:_** This is a temporary repo for better abstraction calls for the Peernet core repo. This is expected to be deprecated once the core officially supports strong abstractions.
 
 The following repo was created for the GopherAdvent blog post. The objective is to prove how easy it's to extend your Go application with p2p capabilites 
 using Peernet. 
